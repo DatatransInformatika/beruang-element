@@ -18,8 +18,10 @@ class BeruangElement extends HTMLElement {
 		if(!!t) {
 			let div = document.createElement('div');		
 			div.innerHTML = t.trim();
-			const node = document.importNode(div.firstChild.content, true);
-			this.shadowRoot.appendChild(node);
+			let c;
+			while( !!(c = div.firstChild) ) {
+				this.shadowRoot.appendChild(c);
+			}
 			div = null;
 			let cls = this.tagName.toLowerCase();
 			let redrawClasses = [];			
@@ -224,6 +226,7 @@ class BeruangElement extends HTMLElement {
 			if(redraw) {
 				redrawClasses.push(cls);
 			}
+			ele.removeAttribute('class$');
 		}//if( atts.length>0 && text.length>0) {
 		
 		let clsnum = 0;		
