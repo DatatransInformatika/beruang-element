@@ -34,6 +34,10 @@ class BeruangElement extends HTMLElement {
 		return null;
 	}
 	
+	static get observers() {
+		return null;
+	}
+	
 	_initDataBinding() {
 		let prop = this.constructor.property || {};
 		for(let pn in prop) {
