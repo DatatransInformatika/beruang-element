@@ -9,7 +9,7 @@ class BeruangElement extends HTMLElement {
 		this._observerPropsMap = {};//{func:[array of properties]}
 		this._propObserversMap = {};//{prop:[array of observer functions]}
 		this._excludedRedrawClasses = [];//array contains class should not be redrawed
-		this._initDataBinding();
+		this._initProp();
 		this._initObserver();
 	}
 
@@ -22,11 +22,11 @@ class BeruangElement extends HTMLElement {
 			this.shadowRoot.appendChild(node);
 			div = null;
 			let cls = this.tagName.toLowerCase();
-			let redrawClasses = [];
+			let redrawClasses = [];			
 			this._propClsMapInit(this.shadowRoot, cls, redrawClasses);			
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._redrawClass(redrawClasses[i]);
-			}
+			}			
 		}
 	}
 	
@@ -38,26 +38,31 @@ class BeruangElement extends HTMLElement {
 		return null;
 	}
 	
-	_initDataBinding() {
+	_initProp() {
 		let prop = this.constructor.property || {};
 		for(let pn in prop) {
 			let _p = {
-				'value':prop[pn].value,
-				'type':prop[pn].type
+				'value':this.hasAttribute(pn) ? this.getAttribute(pn) : prop[pn].value,
+				'type':prop[pn].type,
+				'reflectToAttribute':!!prop[pn].reflectToAttribute
 			};
 			let obs = prop[pn].observer;
 			if(!!this[obs]){
 				_p.observer = obs;
 			}
-			this._prop[pn] = _p;				
+			this._prop[pn] = _p;		
 			Object.defineProperty(this, pn, {
 				get: function () { 
-                    return this._prop[pn].value;
+                    return this._prop[pn].reflectToAttribute ? this.getAttribute(pn) : this._prop[pn].value;
                 },
                 set: function (newValue) {
 					let oldValue = this[pn];
 					let changed = oldValue!==newValue;						
-                    this._prop[pn].value = newValue;
+					if(this._prop[pn].reflectToAttribute) {
+						this.setAttribute(pn, newValue);
+					} else {
+						this._prop[pn].value = newValue;
+					}					
 					if(changed) {
 					////update elements
 						this._updateNode(pn);					
