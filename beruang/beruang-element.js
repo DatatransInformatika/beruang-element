@@ -44,7 +44,7 @@ class BeruangElement extends HTMLElement {
 			let _p = {
 				'value':this.hasAttribute(pn) ? this.getAttribute(pn) : prop[pn].value,
 				'type':prop[pn].type,
-				'reflectToAttribute':!!prop[pn].reflectToAttribute
+				'attribute':!!prop[pn].attribute
 			};
 			let obs = prop[pn].observer;
 			if(!!this[obs]){
@@ -53,12 +53,12 @@ class BeruangElement extends HTMLElement {
 			this._prop[pn] = _p;		
 			Object.defineProperty(this, pn, {
 				get: function () { 
-                    return this._prop[pn].reflectToAttribute ? this.getAttribute(pn) : this._prop[pn].value;
+                    return this._prop[pn].attribute ? this.getAttribute(pn) : this._prop[pn].value;
                 },
                 set: function (newValue) {
 					let oldValue = this[pn];
 					let changed = oldValue!==newValue;						
-					if(this._prop[pn].reflectToAttribute) {
+					if(this._prop[pn].attribute) {
 						this.setAttribute(pn, newValue);
 					} else {
 						this._prop[pn].value = newValue;

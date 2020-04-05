@@ -4,7 +4,7 @@ class MyElement extends BeruangElement {
 	static get property() {
 		return {			
 			sapa:{value:"Tuan"},
-			label:{value:"Abdul", observer:"_labelChanged", reflectToAttribute:true},
+			label:{value:"Abdul", observer:"_labelChanged", attribute:true},
 			cls:{value:"inp"},
 			orang:{
 				value:{nama:'Cicit',hobby:'Gitar'},
