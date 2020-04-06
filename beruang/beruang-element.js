@@ -26,8 +26,7 @@ class BeruangElement extends HTMLElement {
 			div = null;
 			let cls = this.tagName.toLowerCase();
 			let redrawClasses = [];			
-			//this._propClsMapInit(this.shadowRoot, cls, redrawClasses);
-			this._propClsMapInit(this.shadowRoot.firstElementChild, cls, redrawClasses);
+			this._propClsMapInit(this.shadowRoot.firstElementChild, cls, redrawClasses, null);
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._redrawClass(redrawClasses[i]);
 			}			
@@ -151,13 +150,16 @@ class BeruangElement extends HTMLElement {
 		}		
 	}
 
-	_propClsMapInit(ele, cls, redrawClasses) {
+	_propClsMapInit(ele, cls, redrawClasses, beforeEl) {
 		let clsnum = 0;
 		while(!!ele) {
+			if(ele===beforeEl) {
+				break;
+			}
 			if(ele.tagName.toLowerCase()!=='style') {
 				let clz = cls + '-' + (++clsnum);
 				ele.classList.add(clz);
-				this._propClsMapInitDo(ele, clz, redrawClasses);
+				this._propClsMapInitDo(ele, clz, redrawClasses, beforeEl);
 				this._propClsMapInit(ele.firstElementChild, clz, redrawClasses);			
 			}		
 			ele = ele.nextElementSibling;
