@@ -371,7 +371,7 @@ class BeruangElement extends HTMLElement {
 		}
 		let cam = this._clsAttMap[cls];
 		if(!!cam) {
-			this._redrawClassAttr(cam, el);
+			this._redrawClassAttr(cam, el, cls);
 		}				
 		let cfm = this._clsTextMap[cls];
 		if(!!cfm) {
@@ -379,7 +379,7 @@ class BeruangElement extends HTMLElement {
 		}
 	}
 	
-	_redrawClassAttr(cam, el) {
+	_redrawClassAttr(cam, el, cls) {
 		for(let att in cam) {
 			let obj = cam[att];				
 			let val = null;
