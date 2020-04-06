@@ -17,7 +17,8 @@ class BeruangElement extends HTMLElement {
 		let t = this.constructor.template;
 		if(!!t) {
 			let div = document.createElement('div');		
-			div.innerHTML = t.trim();
+			div.innerHTML = t.trim();			
+			this._initTemplate(div);
 			let c;
 			while( !!(c = div.firstChild) ) {
 				this.shadowRoot.appendChild(c);
@@ -25,7 +26,8 @@ class BeruangElement extends HTMLElement {
 			div = null;
 			let cls = this.tagName.toLowerCase();
 			let redrawClasses = [];			
-			this._propClsMapInit(this.shadowRoot, cls, redrawClasses);			
+			//this._propClsMapInit(this.shadowRoot, cls, redrawClasses);
+			this._propClsMapInit(this.shadowRoot.firstElementChild, cls, redrawClasses);
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._redrawClass(redrawClasses[i]);
 			}			
@@ -127,6 +129,20 @@ class BeruangElement extends HTMLElement {
 			}//if(/^\s*\S+\s*[(][^(]+[)]\s*$/g.test(o)){
 		}//for(let i=0, n=obvs.length; i<n; i++) {	
 	}
+	
+	_initTemplate(ele) {
+		let el = ele.firstElementChild;
+		while(el) {
+			let tag = el.tagName.toLowerCase();
+			if(tag==='template') {
+				let clone = document.importNode(el.content, true);
+				let o = el.parentNode.insertBefore(clone, el.nextElementSibling);
+			} else {
+				this._initTemplate(el);
+			}
+			el = el.nextElementSibling;
+		}
+	}
 
 	_updateNode(pn) {
 		let classes = this._propClsMap[pn];
@@ -136,109 +152,113 @@ class BeruangElement extends HTMLElement {
 	}
 
 	_propClsMapInit(ele, cls, redrawClasses) {
+		let clsnum = 0;
+		while(!!ele) {
+			if(ele.tagName.toLowerCase()!=='style') {
+				let clz = cls + '-' + (++clsnum);
+				ele.classList.add(clz);
+				this._propClsMapInitDo(ele, clz, redrawClasses);
+				this._propClsMapInit(ele.firstElementChild, clz, redrawClasses);			
+			}		
+			ele = ele.nextElementSibling;
+		}
+	}
+	
+	_propClsMapInitDo(ele, cls, redrawClasses) {
 		let atts = [];
-		let attobjs = ele!==this.shadowRoot ? ele.attributes : [];
-		for (let i=0, n=attobjs.length; i<n; i++){
+		for (let i=0, attobjs=ele.attributes, n=attobjs.length; i<n; i++){
 			let att = attobjs[i].nodeName;
 			let s = ele.getAttribute(att);
 			if( /^\s*[\[]{2}[^\[]+[\]]{2}\s*$/g.test(s) ) {
 				atts.push(att);
 			}
+		}		
+		let text = ele.firstChild ? ele.firstChild.textContent : '';
+		if(atts.length===0 && text.length===0){
+			return;
+		}		
+		let redraw = false;
+		for(let pn in this._prop) {
+			let propNames = [];			
+			let attmatch = atts.length>0 ? this._propClsMapInitDoAttr(ele, atts, pn, cls, propNames) : false;
+			let textmatch = text.length>0 ? this._propClsMapInitDoText(text, pn, cls, propNames) : false;			
+			if(attmatch || textmatch) {
+				for(let i=0, n=propNames.length; i<n; i++){
+					let s = propNames[i];
+					let clazzez = this._propClsMap[s];
+					if(!!!clazzez) {
+						clazzez = [];
+						this._propClsMap[s] = clazzez;
+					}
+					if(clazzez.indexOf(cls)<0){
+						clazzez.push(cls);
+					}
+				}					
+				redraw=true;
+			}
+		}//for(let pn in this._prop) {			
+		if(redraw) {
+			redrawClasses.push(cls);
 		}
-		
-		let text = ele!==this.shadowRoot && ele.firstChild ? ele.firstChild.textContent : '';
-		
-		if( atts.length>0 || text.length>0) {
-			let redraw = false;
-			for(let pn in this._prop) {
-				let attmatch = false, propmatch = false;
-				let propNames = [];
-				
-				if(atts.length>0) {//tag attribute
-					for (let i=0, n=atts.length; i<n; i++){
-						let att = atts[i];
-						let s = ele.getAttribute(att);
-						let events = s.match(/([:][^\]]+)/g);
-						let event = null;
-						if(!!events && events.length>0) {
-							event = events[0].replace(/^[:]/,'');
-							s = s.replace(/([:][^\]]+)/g,'');
-						}
-						let mtch = this._propOrFuncMatch(pn, s);	
-						if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or [[func(property)]]
-							attmatch = true;
-							let cam = this._clsAttMap[cls];
-							if(!!!cam) {
-								cam = [];
-								this._clsAttMap[cls] = cam;
-							}
-							if(!cam.hasOwnProperty(att)) {								
- 								let obj = {}; //{'att':att};//{att:.., params:[{token:...,prop:...}], fname:..., event:...}
- 								let params = []; //{token:s,prop:p}
- 								if(mtch.propMatch) {//propety, not a function
- 									this._propInit(s, params, propNames);
-									if(!!event && event.length>0){
-										obj['event'] = event;
-									}
- 								} else {//a function								
- 									this._funcInit(s, params, propNames, obj);							
- 								}
- 								obj['params'] = params;
-								cam[att] = obj;
- 							}
-						}//if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)
-					}//for (let i=0, n=atts.length; i<n; i++){
-				}//if(atts.length>0) {//tag attribute
-				
-				if(text.length>0) {//textContent
-					let mtch = this._propOrFuncMatch(pn, text);					
-					if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)						
-						propmatch = true;
-						if( !this._clsTextMap.hasOwnProperty(cls) ) {
-							let obj = {'fmt':text};//{fmt:.., params, fname:...}
-							let params = []; //{token:s,prop:p}
-							if(mtch.propMatch) {//propety, not a function							
-								this._propInit(text, params, propNames);
-							} else {//a function
-								this._funcInit(text, params, propNames, obj);							
-							}
-							obj['params'] = params;
-							this._clsTextMap[cls]=obj;
-						}//if( !this._clsTextMap.hasOwnProperty(cls) ) {								
-					}//if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)
-				}//if(text.length>0) {//textContent
-				
-				if(attmatch || propmatch) {
-					for(let i=0, n=propNames.length; i<n; i++){
-						let s = propNames[i];
-						let clazzez = this._propClsMap[s];
-						if(!!!clazzez) {
-							clazzez = [];
-							this._propClsMap[s] = clazzez;
-						}
-						if(clazzez.indexOf(cls)<0){
-							clazzez.push(cls);
-						}
-					}					
-					redraw=true;
+		ele.removeAttribute('class$');
+	}	
+	
+	_propClsMapInitDoAttr(ele, atts, pn, cls, propNames) {
+		let attmatch = false;
+		for (let i=0, n=atts.length; i<n; i++){
+			let att = atts[i];
+			let s = ele.getAttribute(att);
+			let events = s.match(/([:][^\]]+)/g);
+			let event = null;
+			if(!!events && events.length>0) {
+				event = events[0].replace(/^[:]/,'');
+				s = s.replace(/([:][^\]]+)/g,'');
+			}
+			let mtch = this._propOrFuncMatch(pn, s);	
+			if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or [[func(property)]]
+				attmatch = true;
+				let cam = this._clsAttMap[cls];
+				if(!!!cam) {
+					cam = [];
+					this._clsAttMap[cls] = cam;
 				}
-			}//for(let pn in this._prop) {			
-			if(redraw) {
-				redrawClasses.push(cls);
-			}
-			ele.removeAttribute('class$');
-		}//if( atts.length>0 && text.length>0) {
-		
-		let clsnum = 0;		
-		let el = ele.firstElementChild;
-		while(el) {
-			if(el.tagName.toLowerCase()!=='style') {
-				let clazz = cls + '-' + (++clsnum);
-				el.classList.add(clazz);						
-				this._propClsMapInit(el, clazz, redrawClasses);			
-			}
-			el = el.nextElementSibling;
-		}
+				if(!cam.hasOwnProperty(att)) {								
+ 					let obj = {}; //{'att':att};//{att:.., params:[{token:...,prop:...}], fname:..., event:...}
+ 					let params = []; //{token:s,prop:p}
+ 					if(mtch.propMatch) {//propety, not a function
+ 						this._propInit(s, params, propNames);
+						if(!!event && event.length>0){
+							obj['event'] = event;
+						}
+ 					} else {//a function								
+ 						this._funcInit(s, params, propNames, obj);							
+ 					}
+ 					obj['params'] = params;
+					cam[att] = obj;
+ 				}
+			}//if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)
+		}//for (let i=0, n=atts.length; i<n; i++){	
+		return attmatch;
+	}
+	
+	_propClsMapInitDoText(text, pn, cls, propNames) {
+		let textmatch = false;
+		let mtch = this._propOrFuncMatch(pn, text);					
+		if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)						
+			textmatch = true;
+			if( !this._clsTextMap.hasOwnProperty(cls) ) {
+				let obj = {'fmt':text};//{fmt:.., params, fname:...}
+				let params = []; //{token:s,prop:p}
+				if(mtch.propMatch) {//propety, not a function							
+					this._propInit(text, params, propNames);
+				} else {//a function
+					this._funcInit(text, params, propNames, obj);							
+				}
+				obj['params'] = params;
+				this._clsTextMap[cls]=obj;
+			}//if( !this._clsTextMap.hasOwnProperty(cls) ) {								
+		}//if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or func(property)
+		return textmatch;
 	}
 	
 	_removeSquareBrackets(s, trim) {
@@ -298,9 +318,8 @@ class BeruangElement extends HTMLElement {
 	
 	_funcInit(s, params, propNames, obj) {
 		let f = this._removeSquareBrackets(s, true);
-		obj.fname = this._funcName(f);
-	////get function arguments
-		let arr = this._funcArgs(f);
+		obj.fname = this._funcName(f);//get function name
+		let arr = this._funcArgs(f);//get function arguments
 		for(let i=0, n=arr.length; i<n; i++) {
 			let prop = arr[i];
 			if(prop.length>0){
@@ -351,86 +370,92 @@ class BeruangElement extends HTMLElement {
 			return;
 		}
 		let cam = this._clsAttMap[cls];
-		if(!!cam) {//tag attribute
-			for(let att in cam) {
-				let obj = cam[att];				
-				let val = null;
-				let _el = null;
-				if(!!obj.fname) {//a function
-					_el = el;
-					let arr = [];
-					for(let i=0, n=!!obj.params ? obj.params.length : 0; i<n; i++){
-						let param = obj.params[i];						
-						if(!!param.prop) {
-							arr.push(this._propValue(param.prop));
-						} else {
-							arr.push(param.token);
-						}
-					}						
-					val = this[obj.fname].apply(null, arr);						
-				} else {//not a function
-					if(!!obj.params && obj.params.length>0) {
-						_el = el;
-						let prop = obj.params[0].prop;
-						val = this._propValue(prop);
-					////two way binding:
-						if(!!obj.event) {
-							if(!!!el.beruangevent) {
-								el.beruangevent = true;
-								el.addEventListener(obj.event, ()=>{
-									let idx = this._excludedRedrawClasses.indexOf(cls);
-									if( idx==-1 ){
-										this._excludedRedrawClasses.push(cls);
-									}
-									this[prop] = el[att];
-									if( idx==-1 ){
-										idx = this._excludedRedrawClasses.indexOf(cls);
-										if(idx>-1) {
-											this._excludedRedrawClasses.splice(idx, 1); 
-										}
-									}
-								});
-							}
-						}							
-					}
-				}
-				if(!!_el) {
-					if(att==='class$') {
-						if(!!_el.beruangoldcls) {
-							_el.classList.remove(_el.beruangoldcls);
-						}
-						_el.classList.add(val);
-						_el.beruangoldcls = val;
-					} else {
-						//_el.setAttribute(att, val);
-						_el[att] = val;							
-					}
-				}		
-			}//for(let att in cam)
-		}//if(!!cam) {//tag attribute
-				
+		if(!!cam) {
+			this._redrawClassAttr(cam, el);
+		}				
 		let cfm = this._clsTextMap[cls];
-		if(!!cfm) {//textContent
-			let fmt = cfm.fmt;
-			if(!!cfm.fname) {//a function
+		if(!!cfm) {
+			this._redrawClassText(cfm, el);
+		}
+	}
+	
+	_redrawClassAttr(cam, el) {
+		for(let att in cam) {
+			let obj = cam[att];				
+			let val = null;
+			let _el = null;
+			if(!!obj.fname) {//a function
+				_el = el;
 				let arr = [];
-				for(let i=0, n=!!cfm.params ? cfm.params.length : 0; i<n; i++){
-					let param = cfm.params[i];						
+				for(let i=0, n=!!obj.params ? obj.params.length : 0; i<n; i++){
+					let param = obj.params[i];						
 					if(!!param.prop) {
 						arr.push(this._propValue(param.prop));
 					} else {
 						arr.push(param.token);
 					}
-				}
-				fmt = this[cfm.fname].apply(null, arr);
+				}						
+				val = this[obj.fname].apply(null, arr);						
 			} else {//not a function
-				for(let i=0, n=!!cfm.params ? cfm.params.length : 0; i<n; i++){
-					let param = cfm.params[i];
-					fmt = fmt.replace(param.token, this._propValue(param.prop));					
+				if(!!obj.params && obj.params.length>0) {
+					_el = el;
+					let prop = obj.params[0].prop;
+					val = this._propValue(prop);
+				////two way binding:
+					if(!!obj.event) {
+						if(!!!el.beruangevent) {
+							el.beruangevent = true;
+							el.addEventListener(obj.event, ()=>{
+								let idx = this._excludedRedrawClasses.indexOf(cls);
+								if( idx==-1 ){
+									this._excludedRedrawClasses.push(cls);
+								}
+								this[prop] = el[att];
+								if( idx==-1 ){
+									idx = this._excludedRedrawClasses.indexOf(cls);
+									if(idx>-1) {
+										this._excludedRedrawClasses.splice(idx, 1); 
+									}
+								}
+							});
+						}
+					}							
 				}
 			}
-			el.innerHTML = fmt;
-		}//if(!!cfm) {//textContent
+			if(!!_el) {
+				if(att==='class$') {
+					if(!!_el.beruangoldcls) {
+						_el.classList.remove(_el.beruangoldcls);
+					}
+					_el.classList.add(val);
+					_el.beruangoldcls = val;
+				} else {
+					_el[att] = val;							
+				}
+			}		
+		}//for(let att in cam)	
+	}
+	
+	_redrawClassText(cfm, el) {
+		let fmt = cfm.fmt;
+		if(!!cfm.fname) {//a function
+			let arr = [];
+			for(let i=0, n=!!cfm.params ? cfm.params.length : 0; i<n; i++){
+				let param = cfm.params[i];						
+				if(!!param.prop) {
+					arr.push(this._propValue(param.prop));
+				} else {
+					arr.push(param.token);
+				}
+			}
+			fmt = this[cfm.fname].apply(null, arr);
+		} else {//not a function
+			for(let i=0, n=!!cfm.params ? cfm.params.length : 0; i<n; i++){
+				let param = cfm.params[i];
+				fmt = fmt.replace(param.token, this._propValue(param.prop));					
+			}
+		}
+		el.innerHTML = fmt;
 	}
 }
 
