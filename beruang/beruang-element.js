@@ -3,7 +3,7 @@ class BeruangElement extends HTMLElement {
 		super();
 		this.attachShadow({mode:'open'});
 		this._prop = {};
-		this._propClsMap = {};/*property to class map, a property map to array of class*/
+		this._propClsMap = {};/*property to class map, a property map to array of class {<prop>:[cls, cls, cls]}*/
 		this._clsTextMap = {};/*class to element text processing map {<cls>:{fmt:.., params:[{token:..,prop:..}], fname:...}}*/
 		this._clsAttMap = {};/*class to element tag attribute processing map {<cls>:{<att>:{params:[{token:..,prop:..}], fname:..., event:...}}}*/
 		this._clsIfMap = {};/*class to if template map {<cls>:{props:[...], fname:...}}*/
@@ -31,7 +31,6 @@ class BeruangElement extends HTMLElement {
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._redrawClass(redrawClasses[i]);
 			}			
-			console.log('templates', this._clsIfMap, this._clsEachMap);
 		}
 	}
 	
@@ -41,6 +40,23 @@ class BeruangElement extends HTMLElement {
 	
 	static get observers() {
 		return null;
+	}
+	
+	_removeClassesFromMaps(clss) {
+		for(let i=0,n=!!clss ? clss.length : 0;i<n;i++){
+			let cls = clss[i];
+			for(let pn in this._propClsMap) {
+				let arr = this._propClsMap[pn];
+ 				let idx = arr.indexOf(cls);
+				if(idx>-1){
+					arr.splice(idx,1);
+				}
+			}				
+			delete this._clsTextMap[cls];
+			delete this._clsAttMap[cls];
+			delete this._clsIfMap[cls];
+			delete this._clsEachMap[cls];			
+		}
 	}
 	
 	_initProp() {
@@ -147,20 +163,6 @@ class BeruangElement extends HTMLElement {
 		}//for(let i=0, n=obvs.length; i<n; i++) {	
 	}
 	
-/*	_initTemplate(ele) {
-		let el = ele.firstElementChild;
-		while(el) {
-			let tag = el.nodeName.toLowerCase();
-			if(tag==='template') {
-				let clone = document.importNode(el.content, true);
-				let o = el.parentNode.insertBefore(clone, el.nextElementSibling);
-			} else {
-				this._initTemplate(el);
-			}
-			el = el.nextElementSibling;
-		}
-	}*/
-
 	_updateNode(pn) {
 		let classes = this._propClsMap[pn];
 		for(let i=0, n=!!classes ? classes.length : 0; i<n; i++) {
@@ -177,6 +179,7 @@ class BeruangElement extends HTMLElement {
 			if(ele.nodeName.toLowerCase()!=='style') {
 				let clz = cls + '-' + (++clsnum);
 				ele.classList.add(clz);
+				ele.beruangcls=clz;
 				this._propClsMapInitDo(ele, clz, redrawClasses, beforeEl);
 				this._propClsMapInit(ele.firstElementChild, clz, redrawClasses);			
 			}		
@@ -261,7 +264,7 @@ class BeruangElement extends HTMLElement {
 					this._funcInit(text, params, propNames, obj);
 				}	
 				obj['params'] = params;			
-				tmplMap[cls] = obj;
+				tmplMap[cls] = obj;				
 			}
 			return true;
 		}
@@ -434,6 +437,11 @@ class BeruangElement extends HTMLElement {
 		if(!!!el) {
 			return;
 		}
+		let ctm = this._clsIfMap[cls];
+		if(!!ctm){			
+			this._redrawClassIf(ctm, el);
+			return;//if template then exit immediately
+		}		
 		let cam = this._clsAttMap[cls];
 		if(!!cam) {
 			this._redrawClassAttr(cam, el, cls);
@@ -444,61 +452,100 @@ class BeruangElement extends HTMLElement {
 		}
 	}
 	
+	_redrawClassIf(obj, el) {
+		let rslt = this._redrawClassAttrValue(obj, el, null);
+		if(!!!rslt.el) {
+			return;
+		}		
+		if(!!rslt.val) {	
+			let sibling = el.previousSibling;	
+			let clone = document.importNode(el.content, true);
+			el.parentNode.insertBefore(clone, el);			
+			if(!!!el.beruangtmplels){
+				el.beruangtmplels = [];
+				let elstart = !!sibling ? sibling.nextSibling : el.parentNode.firstChild;
+				let elrun = elstart;
+				while(!!elrun && elrun!==el) {
+					el.beruangtmplels.push(elrun);
+					elrun = elrun.nextSibling;
+				}
+				let redrawClasses = [];
+				this._propClsMapInit(elstart, el.beruangcls, redrawClasses, el);
+				for(let i=0, n=redrawClasses.length; i<n; i++) {
+					this._redrawClass(redrawClasses[i]);
+				}
+			}
+		} else {
+			let clss = [];
+			for(let i=0,n=!!el.beruangtmplels ? el.beruangtmplels.length : 0; i<n; i++){
+				let e = el.beruangtmplels[i];
+				clss.push(e.beruangcls);
+				e.parentNode.removeChild(e);
+			}
+			delete el.beruangtmplels;
+			this._removeClassesFromMaps(clss);
+		}
+	}
+	
 	_redrawClassAttr(cam, el, cls) {
 		for(let att in cam) {
 			let obj = cam[att];				
-			let val = null;
-			let _el = null;
-			if(!!obj.fname) {//a function
-				_el = el;
-				let arr = [];
-				for(let i=0, n=!!obj.params ? obj.params.length : 0; i<n; i++){
-					let param = obj.params[i];						
-					if(!!param.prop) {
-						arr.push(this._propValue(param.prop));
-					} else {
-						arr.push(param.token);
-					}
-				}						
-				val = this[obj.fname].apply(null, arr);						
-			} else {//not a function
-				if(!!obj.params && obj.params.length>0) {
-					_el = el;
-					let prop = obj.params[0].prop;
-					val = this._propValue(prop);
-				////two way binding:
-					if(!!obj.event) {
-						if(!!!el.beruangevent) {
-							el.beruangevent = true;
-							el.addEventListener(obj.event, ()=>{
-								let idx = this._excludedRedrawClasses.indexOf(cls);
-								if( idx==-1 ){
-									this._excludedRedrawClasses.push(cls);
-								}
-								this[prop] = el[att];
-								if( idx==-1 ){
-									idx = this._excludedRedrawClasses.indexOf(cls);
-									if(idx>-1) {
-										this._excludedRedrawClasses.splice(idx, 1); 
-									}
-								}
-							});
-						}
-					}							
-				}
-			}
-			if(!!_el) {
+			let rslt = this._redrawClassAttrValue(obj, el, cls);
+			if(!!rslt.el) {
 				if(att==='class$') {
-					if(!!_el.beruangoldcls) {
-						_el.classList.remove(_el.beruangoldcls);
+					if(!!rslt.el.beruangoldcls) {
+						rslt.el.classList.remove(rslt.el.beruangcls);
 					}
-					_el.classList.add(val);
-					_el.beruangoldcls = val;
+					rslt.el.classList.add(rslt.val);
+					rslt.el.beruangoldcls = rslt.val;
 				} else {
-					_el[att] = val;							
+					rslt.el[att] = rslt.val;							
 				}
 			}		
 		}//for(let att in cam)	
+	}
+	
+	_redrawClassAttrValue(obj, el, cls) {
+		let rslt={'el':null,'val':null};
+		if(!!obj.fname) {//a function
+			rslt.el = el;
+			let arr = [];
+			for(let i=0, n=!!obj.params ? obj.params.length : 0; i<n; i++){
+				let param = obj.params[i];						
+				if(!!param.prop) {
+					arr.push(this._propValue(param.prop));
+				} else {
+					arr.push(param.token);
+				}
+			}						
+			rslt.val = this[obj.fname].apply(null, arr);						
+		} else {//not a function
+			if(!!obj.params && obj.params.length>0) {
+				rslt.el = el;
+				let prop = obj.params[0].prop;
+				rslt.val = this._propValue(prop);
+			////two way binding:
+				if(!!obj.event) {
+					if(!!!el.beruangevent) {
+						el.beruangevent = true;
+						el.addEventListener(obj.event, ()=>{
+							let idx = this._excludedRedrawClasses.indexOf(cls);
+							if( idx==-1 ){
+								this._excludedRedrawClasses.push(cls);
+							}
+							this[prop] = el[att];
+							if( idx==-1 ){
+								idx = this._excludedRedrawClasses.indexOf(cls);
+								if(idx>-1) {
+									this._excludedRedrawClasses.splice(idx, 1); 
+								}
+							}
+						});
+					}
+				}							
+			}
+		}
+		return rslt;
 	}
 	
 	_redrawClassText(cfm, el) {

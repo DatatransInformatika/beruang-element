@@ -24,6 +24,7 @@ class MyElement extends BeruangElement {
 :host .inp {color:green}
 </style>
 <div>
+<template if="[[show]]"><div>[[sapa]]</div></template>
 <h1>[[decorate(sapa, orang.hobby,orang.nama)]]</h1>
 <h2>Hello2 [[sapa]] [[orang.nama]] [[orang.hobby]] ya!</h2>
 <div>[[label]]</div>
