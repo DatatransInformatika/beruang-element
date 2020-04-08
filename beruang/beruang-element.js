@@ -29,7 +29,7 @@ class BeruangElement extends HTMLElement {
 			let redrawClasses = [];			
 			this._propClsMapInit(this.shadowRoot.firstElementChild, cls, redrawClasses, null);
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
-				this._redrawClass(redrawClasses[i]);
+				this._renderClass(redrawClasses[i]);
 			}						
 		}
 	}
@@ -166,7 +166,7 @@ class BeruangElement extends HTMLElement {
 	_updateNode(pn) {
 		let classes = this._propClsMap[pn];
 		for(let i=0, n=!!classes ? classes.length : 0; i<n; i++) {
-			this._redrawClass(classes[i]);
+			this._renderClass(classes[i]);
 		}		
 	}
 
@@ -437,7 +437,7 @@ class BeruangElement extends HTMLElement {
 		return val;	
 	}
 		
-	_redrawClass(cls) {
+	_renderClass(cls) {
 		if(this._excludedRedrawClasses.indexOf(cls)>-1) {
 			return;
 		}	
@@ -447,21 +447,21 @@ class BeruangElement extends HTMLElement {
 		}
 		let ctm = this._clsIfMap[cls];
 		if(!!ctm){			
-			this._redrawClassIf(ctm, el);
+			this._renderClassIf(ctm, el);
 			return;//if template then exit immediately
 		}		
 		let cam = this._clsAttMap[cls];
 		if(!!cam) {
-			this._redrawClassAttr(cam, el, cls);
+			this._renderClassAttr(cam, el, cls);
 		}				
 		let cfm = this._clsTextMap[cls];
 		if(!!cfm) {
-			this._redrawClassText(cfm, el);
+			this._renderClassText(cfm, el);
 		}
 	}
 	
-	_redrawClassIf(obj, el) {
-		let rslt = this._redrawClassAttrValue(obj, el, null, null);
+	_renderClassIf(obj, el) {
+		let rslt = this._renderClassAttrValue(obj, el, null, null);
 		if(!!!rslt.el) {
 			return;
 		}
@@ -493,7 +493,7 @@ class BeruangElement extends HTMLElement {
 				let redrawClasses = [];
 				this._propClsMapInit(elstart, el.beruangcls, redrawClasses, el);
 				for(let i=0, n=redrawClasses.length; i<n; i++) {
-					this._redrawClass(redrawClasses[i]);
+					this._renderClass(redrawClasses[i]);
 				}
 			}
 		} else {
@@ -521,10 +521,10 @@ class BeruangElement extends HTMLElement {
 		}		
 	}
 	
-	_redrawClassAttr(cam, el, cls) {
+	_renderClassAttr(cam, el, cls) {
 		for(let att in cam) {
 			let obj = cam[att];				
-			let rslt = this._redrawClassAttrValue(obj, el, cls, att);
+			let rslt = this._renderClassAttrValue(obj, el, cls, att);
 			if(!!rslt.el) {
 				if(att==='class$') {
 					if(!!rslt.el.beruangoldcls) {
@@ -539,7 +539,7 @@ class BeruangElement extends HTMLElement {
 		}//for(let att in cam)	
 	}
 	
-	_redrawClassAttrValue(obj, el, cls, att) {
+	_renderClassAttrValue(obj, el, cls, att) {
 		let rslt={'el':null,'val':null};
 		if(!!obj.fname) {//a function
 			rslt.el = el;
@@ -582,7 +582,7 @@ class BeruangElement extends HTMLElement {
 		return rslt;
 	}
 	
-	_redrawClassText(cfm, el) {
+	_renderClassText(cfm, el) {
 		let fmt = cfm.fmt;
 		if(!!cfm.fname) {//a function
 			let arr = [];
