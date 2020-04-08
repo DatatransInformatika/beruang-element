@@ -64,8 +64,9 @@ class BeruangElement extends HTMLElement {
 		for(let pn in prop) {
 			let _typ = prop[pn].hasOwnProperty('type') ? prop[pn].type : String;
 			let _val;
-			if(this.hasAttribute(pn)){
-				_val = this.getAttribute(pn);
+			let attr = this._camelize(pn);
+			if(this.hasAttribute(attr)){
+				_val = this.getAttribute(attr);
 				if(_typ===Boolean && _val===undefined){
 					_val = true;
 				}
@@ -90,13 +91,13 @@ class BeruangElement extends HTMLElement {
 			this._prop[pn] = _p;		
 			Object.defineProperty(this, pn, {
 				get: function () { 
-                    return this._prop[pn].attribute ? this.getAttribute(pn) : this._prop[pn].value;
+                    return this._prop[pn].attribute ? this.getAttribute(this._decamelize(pn)) : this._prop[pn].value;
                 },
                 set: function (newValue) {
 					let oldValue = this[pn];
 					let changed = oldValue!==newValue;						
 					if(this._prop[pn].attribute) {
-						this.setAttribute(pn, newValue);
+						this.setAttribute(this._decamelize(pn), newValue);
 					} else {
 						this._prop[pn].value = newValue;
 					}					
@@ -123,6 +124,20 @@ class BeruangElement extends HTMLElement {
                 }
             });				
 		}//for(let pn in prop)	
+	}
+	
+	_camelize(str) {
+		return str.replace(/^([A-Z])|[\s-_]+(\w)/g, function(match, p1, p2, offset) {
+			if (p2) return p2.toUpperCase();
+			return p1.toLowerCase();        
+		});
+	}
+	
+	_decamelize(str){
+		return str
+			.replace(/([a-z\d])([A-Z])/g, '$1' + '-' + '$2')
+			.replace(/([A-Z]+)([A-Z][a-z\d]+)/g, '$1' + '-' + '$2')
+			.toLowerCase();
 	}
 	
 	_initObserver() {
