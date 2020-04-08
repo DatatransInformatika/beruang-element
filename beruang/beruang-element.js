@@ -4,8 +4,10 @@ class BeruangElement extends HTMLElement {
 		this.attachShadow({mode:'open'});
 		this._prop = {};
 		this._propClsMap = {};/*property to class map, a property map to array of class*/
-		this._clsTextMap = {};/*class to function map {fmt:.., params:[{token:..,prop:..}], fname:...}*/
-		this._clsAttMap = {};/*class to function map {<att>:{params:[{token:..,prop:..}], fname:..., event:...}}*/
+		this._clsTextMap = {};/*class to element text processing map {<cls>:{fmt:.., params:[{token:..,prop:..}], fname:...}}*/
+		this._clsAttMap = {};/*class to element tag attribute processing map {<cls>:{<att>:{params:[{token:..,prop:..}], fname:..., event:...}}}*/
+		this._clsIfMap = {};/*class to if template map {<cls>:{props:[...], fname:...}}*/
+		this._clsEachMap = {};/*class to each template map {<cls>:{props:[...], fname:...}}*/
 		this._observerPropsMap = {};//{func:[array of properties]}
 		this._propObserversMap = {};//{prop:[array of observer functions]}
 		this._excludedRedrawClasses = [];//array contains class should not be redrawed
@@ -18,18 +20,18 @@ class BeruangElement extends HTMLElement {
 		if(!!t) {
 			let div = document.createElement('div');		
 			div.innerHTML = t.trim();			
-			this._initTemplate(div);
 			let c;
 			while( !!(c = div.firstChild) ) {
 				this.shadowRoot.appendChild(c);
 			}
 			div = null;
-			let cls = this.tagName.toLowerCase();
+			let cls = this.nodeName.toLowerCase();
 			let redrawClasses = [];			
 			this._propClsMapInit(this.shadowRoot.firstElementChild, cls, redrawClasses, null);
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._redrawClass(redrawClasses[i]);
 			}			
+			console.log('templates', this._clsIfMap, this._clsEachMap);
 		}
 	}
 	
@@ -44,9 +46,25 @@ class BeruangElement extends HTMLElement {
 	_initProp() {
 		let prop = this.constructor.property || {};
 		for(let pn in prop) {
+			let _typ = prop[pn].hasOwnProperty('type') ? prop[pn].type : String;
+			let _val;
+			if(this.hasAttribute(pn)){
+				_val = this.getAttribute(pn);
+				if(_typ===Boolean && _val===undefined){
+					_val = true;
+				}
+			} else {
+				if(prop[pn].hasOwnProperty('value')){
+					_val = prop[pn].value;
+				} else {
+					if(_typ===Boolean){
+						_val = true;
+					}
+				}
+			}
 			let _p = {
-				'value':this.hasAttribute(pn) ? this.getAttribute(pn) : prop[pn].value,
-				'type':prop[pn].type,
+				'value':_val,
+				'type':_typ,
 				'attribute':!!prop[pn].attribute
 			};
 			let obs = prop[pn].observer;
@@ -129,10 +147,10 @@ class BeruangElement extends HTMLElement {
 		}//for(let i=0, n=obvs.length; i<n; i++) {	
 	}
 	
-	_initTemplate(ele) {
+/*	_initTemplate(ele) {
 		let el = ele.firstElementChild;
 		while(el) {
-			let tag = el.tagName.toLowerCase();
+			let tag = el.nodeName.toLowerCase();
 			if(tag==='template') {
 				let clone = document.importNode(el.content, true);
 				let o = el.parentNode.insertBefore(clone, el.nextElementSibling);
@@ -141,7 +159,7 @@ class BeruangElement extends HTMLElement {
 			}
 			el = el.nextElementSibling;
 		}
-	}
+	}*/
 
 	_updateNode(pn) {
 		let classes = this._propClsMap[pn];
@@ -156,7 +174,7 @@ class BeruangElement extends HTMLElement {
 			if(ele===beforeEl) {
 				break;
 			}
-			if(ele.tagName.toLowerCase()!=='style') {
+			if(ele.nodeName.toLowerCase()!=='style') {
 				let clz = cls + '-' + (++clsnum);
 				ele.classList.add(clz);
 				this._propClsMapInitDo(ele, clz, redrawClasses, beforeEl);
@@ -168,23 +186,47 @@ class BeruangElement extends HTMLElement {
 	
 	_propClsMapInitDo(ele, cls, redrawClasses) {
 		let atts = [];
-		for (let i=0, attobjs=ele.attributes, n=attobjs.length; i<n; i++){
-			let att = attobjs[i].nodeName;
-			let s = ele.getAttribute(att);
-			if( /^\s*[\[]{2}[^\[]+[\]]{2}\s*$/g.test(s) ) {
-				atts.push(att);
+		
+		let re = new RegExp("^\\s*[\\[]{2}[^\\[]+[\\]]{2}\\s*$", 'g');
+		let text;
+		let tmplMap;//pointer to this._clsIfMap or this._clsEachMap
+		let tmplText;
+		if(ele.nodeName.toLowerCase()==='template') {
+			let o = {'if':this._clsIfMap, 'each':this._clsEachMap};
+			for(let t in o){
+				if(ele.hasAttribute(t)){
+					tmplText = ele.getAttribute(t);
+					if(re.test(tmplText)) {
+						tmplMap=o[t];
+					}
+					break;
+				}
 			}
-		}		
-		let text = ele.firstChild ? ele.firstChild.textContent : '';
-		if(atts.length===0 && text.length===0){
-			return;
-		}		
+			if(!!!tmplMap){
+				return;
+			}
+		} else {
+			for (let i=0, attrs=ele.attributes, n=attrs.length; i<n; i++){
+				let att = attrs[i].nodeName;
+				let s = ele.getAttribute(att);
+				if(/^\s*[\[]{2}[^\[]+[\]]{2}\s*$/g.test(s)) {
+					atts.push(att);
+				}
+			}	
+			text = ele.firstChild ? ele.firstChild.textContent : '';
+			if(atts.length===0 && text.length===0){
+				return;
+			}
+		}
+		re = null;
+				
 		let redraw = false;
 		for(let pn in this._prop) {
-			let propNames = [];			
-			let attmatch = atts.length>0 ? this._propClsMapInitDoAttr(ele, atts, pn, cls, propNames) : false;
-			let textmatch = text.length>0 ? this._propClsMapInitDoText(text, pn, cls, propNames) : false;			
-			if(attmatch || textmatch) {
+			let propNames = [];
+			let tagmatch = !!tmplMap ? this._propClsMapInitDoTmpl(ele, tmplMap, tmplText, pn, cls, propNames) : false; 
+			let attmatch = !!!tmplMap && atts.length>0 ? this._propClsMapInitDoAttr(ele, atts, pn, cls, propNames) : false;
+			let textmatch = !!!tmplMap && text.length>0 ? this._propClsMapInitDoText(text, pn, cls, propNames) : false;			
+			if(tagmatch || attmatch || textmatch) {
 				for(let i=0, n=propNames.length; i<n; i++){
 					let s = propNames[i];
 					let clazzez = this._propClsMap[s];
@@ -205,6 +247,27 @@ class BeruangElement extends HTMLElement {
 		ele.removeAttribute('class$');
 	}	
 	
+	_propClsMapInitDoTmpl(ele, tmplMap, text, pn, cls, propNames) {
+		//tmplMap:class to if template map {<cls>:{props:[...], fname:...}}
+		let mtch = this._propOrFuncMatch(pn, text);
+		if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or [[func(property)]]
+			let obj = tmplMap[cls];
+			if(!!!obj) {
+				obj = {};
+				let params = [];//{token:s,prop:p}
+				if(mtch.propMatch) {//propety, not a function
+					this._propInit(text, params, propNames);				
+				} else {//a function
+					this._funcInit(text, params, propNames, obj);
+				}	
+				obj['params'] = params;			
+				tmplMap[cls] = obj;
+			}
+			return true;
+		}
+		return false;
+	}
+	
 	_propClsMapInitDoAttr(ele, atts, pn, cls, propNames) {
 		let attmatch = false;
 		for (let i=0, n=atts.length; i<n; i++){
@@ -216,24 +279,24 @@ class BeruangElement extends HTMLElement {
 				event = events[0].replace(/^[:]/,'');
 				s = s.replace(/([:][^\]]+)/g,'');
 			}
-			let mtch = this._propOrFuncMatch(pn, s);	
+			let mtch = this._propOrFuncMatch(pn, s);
 			if(mtch.propMatch || mtch.funcMatch) {//match form of [[property]] or [[func(property)]]
 				attmatch = true;
 				let cam = this._clsAttMap[cls];
 				if(!!!cam) {
-					cam = [];
+					cam = {};
 					this._clsAttMap[cls] = cam;
 				}
-				if(!cam.hasOwnProperty(att)) {								
- 					let obj = {}; //{'att':att};//{att:.., params:[{token:...,prop:...}], fname:..., event:...}
+				if(!cam.hasOwnProperty(att)) {
+ 					let obj = {}; //<att>:{params:[{token:...,prop:...}], fname:..., event:...}
  					let params = []; //{token:s,prop:p}
  					if(mtch.propMatch) {//propety, not a function
  						this._propInit(s, params, propNames);
 						if(!!event && event.length>0){
 							obj['event'] = event;
 						}
- 					} else {//a function								
- 						this._funcInit(s, params, propNames, obj);							
+ 					} else {//a function
+ 						this._funcInit(s, params, propNames, obj);
  					}
  					obj['params'] = params;
 					cam[att] = obj;
@@ -282,7 +345,7 @@ class BeruangElement extends HTMLElement {
 		};
 	}
 	
-	_pushPropNames(props, propNames) {
+	_pushPathToPropNames(props, propNames) {
 		let p = '';
 		for(let i=0, n=props.length; i<n; i++) {
 			p += (i>0 ? '.' : '') + props[i];
@@ -299,7 +362,7 @@ class BeruangElement extends HTMLElement {
 			if(this._prop.hasOwnProperty(props[0])) {
 				if(props.length===1 || this._prop[props[0]].type===Object/*props.length>1 must be Object*/) {
 					params.push({'token':token, 'prop':prop});
-					this._pushPropNames(props, propNames);
+					this._pushPathToPropNames(props, propNames);
 				}
 			}
 		}	
@@ -330,11 +393,11 @@ class BeruangElement extends HTMLElement {
 				if(this._prop.hasOwnProperty(props[0])) {
 					isProp = props.length===1 || this._prop[props[0]].type===Object/*props.length>1 must be Object*/;
 				}											
-				let obj = {};
+				let o = {};
 				if(isProp) {
-					obj.token = prop;
-					obj.prop = prop;
-					this._pushPropNames(props, propNames);
+					o.token = prop;
+					o.prop = prop;
+					this._pushPathToPropNames(props, propNames);
 				} else {
 				////trim singlequote or doublequote
 					if(/^'|'$/g.test(prop)){
@@ -342,9 +405,9 @@ class BeruangElement extends HTMLElement {
 					} else if(/^"|"$/g.test(prop)) {
 						prop = prop.replace(/^"|"$/g, '');
 					}											
-					obj.token = prop;	
+					o.token = prop;	
 				}
-				params.push(obj);
+				params.push(o);
 			}//if(prop.length>0){
 		}//for(let i=0;i<arr.length;i++) {
 	}

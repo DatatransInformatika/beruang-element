@@ -9,6 +9,10 @@ class MyElement extends BeruangElement {
 			orang:{
 				value:{nama:'Cicit',hobby:'Gitar'},
 				type:Object
+			},
+			show:{
+				value:false,
+				type:Boolean
 			}
 		};
 	}
@@ -26,7 +30,7 @@ class MyElement extends BeruangElement {
 <input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[upper(label)]]">
 <input id="inp2" class$="[[cls]]" type="text" id="fname2" name="fname2" value="[[label]]">
 <input id="inp3" class="inp" type="text" id="fname2" name="fname2" value="[[label:change]]"> <!-- two-way on change-event -->
-<template typ="if"><div>[[sapa]]</div></template>
+<template if="[[show]]"><div>[[sapa]]</div></template>
 </div>
 `;
 	}
