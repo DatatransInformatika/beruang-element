@@ -376,7 +376,7 @@ class BeruangElement extends HTMLElement {
 		for(let i=0, n=props.length; i<n; i++) {
 			p += (i>0 ? '.' : '') + props[i];
 			propNames.push(p);
-		}	
+		}
 	}
 	
 	_objPropPathSplit(s) {/*object and its properties path: obj.prop1.prop2...*/
@@ -384,17 +384,20 @@ class BeruangElement extends HTMLElement {
 	}
 	
 	_objPropPathRef(props) {
-		let rslt = {'depth':props.length, 'obj':this[props[0]], 'idx':null};
+		let len = props.length;
+		let p0 = props[0];
+		let rslt = {'obj':(len===1 ? this : this[p0]), 'idx':(len===1 ? p0 : null), 'val':(len===1? this[p0] : null)};
 		let re = /^[1-9][0-9]*$/;
-		for(let i=1, n=rslt.depth; rslt.obj!==undefined && rslt.obj!==null && i<n; i++) {
+		for(let i=1; rslt.obj!==undefined && rslt.obj!==null && i<len; i++) {
 			let s = props[i];
 			if(re.test(s)){
 				s = parseInt(s);				
 			}
-			if(i<n-1){
+			if(i<len-1){
 				rslt.obj = rslt.obj[s];
-			} else if(i==n-1){
+			} else if(i==len-1){
 				rslt.idx = s;
+				rslt.val = rslt.obj[rslt.idx];
 			}
 		}
 		re = null;
@@ -462,8 +465,7 @@ class BeruangElement extends HTMLElement {
 		
 	_propValue(prop) {
 		let arr = this._objPropPathSplit(prop);
-		let rslt = this._objPropPathRef(arr);
-		return rslt.depth===1 ? rslt.obj : (!!rslt.obj ? rslt.obj[rslt.idx] : null);
+		return this._objPropPathRef(arr).val;
 	}
 				
 	_renderClass(cls) {
@@ -598,12 +600,10 @@ class BeruangElement extends HTMLElement {
 							}
 							let arr = this._objPropPathSplit(prop);
 							let rslt = this._objPropPathRef(arr);
-							if(rslt.depth===1){
-								this[arr[0]] = el[att];
-							} else {
-								rslt.obj[rslt.idx] = el[att];
+							rslt.obj[rslt.idx] = el[att];
+							if(rslt.obj!==this) {
 								this._updateNode(prop);
-							}
+							}							
 							if( idx==-1 ){
 								idx = this._excludedRedrawClasses.indexOf(cls);
 								if(idx>-1) {

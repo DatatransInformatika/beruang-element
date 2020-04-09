@@ -30,7 +30,7 @@ class MyElement extends BeruangElement {
 		<div>[[myLabel]]</div>
 	</template>
 </template>
-<h1>[[decorate(sapa, orang.hobby,orang.nama)]]</h1>
+<h1>[[decorate(sapa, orang.hobby, orang.nama)]]</h1>
 <h2>Hello2 [[sapa]] [[orang.nama]] [[orang.hobby]] ya!</h2>
 <div>[[myLabel]]</div>
 <input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[upper(myLabel)]]">
@@ -49,8 +49,8 @@ class MyElement extends BeruangElement {
 		return ['_sapaLabelChanged(sapa, myLabel)'];
 	}
 	
-	decorate(sapa, label, num) {
-		return sapa + ' ' + label.toUpperCase() + ' ' + num;
+	decorate(s1, s2, s3) {
+		return s1 + ' ' + s2.toUpperCase() + ' ' + s3;
 	}
 	
 	upper(name) {
