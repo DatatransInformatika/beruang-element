@@ -24,7 +24,7 @@ class MyElement extends BeruangElement {
 :host .inp {color:green}
 </style>
 <div>
-<template if="![[show]]">
+<template if="[[show]]">
 	<div>[[sapa]]</div>
 	<template if="[[show]]">
 		<div>[[myLabel]]</div>
@@ -36,7 +36,11 @@ class MyElement extends BeruangElement {
 <input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[upper(myLabel)]]">
 <input id="inp2" class$="[[cls]]" type="text" id="fname2" name="fname2" value="[[myLabel]]">
 <input id="inp3" class="inp" type="text" id="fname2" name="fname2" value="[[orang.nama:change]]"> <!-- two-way on change-event -->
-<template if="[[show]]"><div>[[sapa]]</div></template>
+<template if="[[show]]"><div>[[sapa]]</div>
+	<template if="[[show]]">
+		<div>[[orang.nama]]</div>
+	</template>
+</template>
 </div>
 `;
 	}
