@@ -67,8 +67,12 @@ class BeruangElement extends HTMLElement {
 			let attr = this._camelize(pn);
 			if(this.hasAttribute(attr)){
 				_val = this.getAttribute(attr);
-				if(_typ===Boolean && (_val===undefined || _val===null || _val==='')){
-					_val = true;
+				if(_typ===Boolean){
+					if(_val===undefined || _val===null || _val==='') {
+						_val = true;
+					} else {
+						_val = !!_val;
+					}
 				}
 			} else {
 				if(prop[pn].hasOwnProperty('value')){
