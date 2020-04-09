@@ -68,11 +68,7 @@ class BeruangElement extends HTMLElement {
 			if(this.hasAttribute(attr)){
 				_val = this.getAttribute(attr);
 				if(_typ===Boolean){
-					if(_val===undefined || _val===null || _val==='') {
-						_val = true;
-					} else {
-						_val = !!_val;
-					}
+					_val = (_val==='' || _val==='true') ? true : (_val==='false' ? false : !!_val);
 				}
 			} else {
 				if(prop[pn].hasOwnProperty('value')){
