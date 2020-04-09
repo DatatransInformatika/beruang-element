@@ -103,7 +103,7 @@ class BeruangElement extends HTMLElement {
 					}					
 					if(changed) {
 					////update elements
-						this._updateNode(pn);					
+						this._updateNode(pn);
 					////dedicated observer for the property	
 						let obs = this._prop[pn].observer;
 						if(!!obs) {
@@ -371,7 +371,7 @@ class BeruangElement extends HTMLElement {
 		};
 	}
 	
-	_pushPathToPropNames(props, propNames) {
+	_objPropPathToPropNames(props, propNames) {
 		let p = '';
 		for(let i=0, n=props.length; i<n; i++) {
 			p += (i>0 ? '.' : '') + props[i];
@@ -379,16 +379,38 @@ class BeruangElement extends HTMLElement {
 		}	
 	}
 	
+	_objPropPathSplit(s) {/*object and its properties path: obj.prop1.prop2...*/
+		return s.split(/[.]/g);
+	}
+	
+	_objPropPathRef(props) {
+		let rslt = {'depth':props.length, 'obj':this[props[0]], 'idx':null};
+		let re = /^[1-9][0-9]*$/;
+		for(let i=1, n=rslt.depth; rslt.obj!==undefined && rslt.obj!==null && i<n; i++) {
+			let s = props[i];
+			if(re.test(s)){
+				s = parseInt(s);				
+			}
+			if(i<n-1){
+				rslt.obj = rslt.obj[s];
+			} else if(i==n-1){
+				rslt.idx = s;
+			}
+		}
+		re = null;
+		return rslt;
+	}
+	
 	_propInit(s, params, propNames) {
 		let arr = s.match(/[\[]{2}[^\[]+[\]]{2}/g);
 		for(let i=0, n=arr.length; i<n; i++){
 			let token = arr[i];
 			let prop = this._removeSquareBrackets(token, false);
-			let props = prop.split(/[.]/g);/*object and its properties path: obj.prop1.prop2...*/
+			let props = this._objPropPathSplit(prop);
 			if(this._prop.hasOwnProperty(props[0])) {
-				if(props.length===1 || this._prop[props[0]].type===Object/*props.length>1 must be Object*/) {
+				if(props.length===1/*primitive type*/ || this._prop[props[0]].type===Object/*object*/) {
 					params.push({'token':token, 'prop':prop});
-					this._pushPathToPropNames(props, propNames);
+					this._objPropPathToPropNames(props, propNames);
 				}
 			}
 		}	
@@ -414,7 +436,7 @@ class BeruangElement extends HTMLElement {
 		for(let i=0, n=arr.length; i<n; i++) {
 			let prop = arr[i];
 			if(prop.length>0){
-				let props = prop.split(/[.]/g);/*object and its properties path: obj.prop1.prop2...*/
+				let props = this._objPropPathSplit(prop);
 				let isProp = false;
 				if(this._prop.hasOwnProperty(props[0])) {
 					isProp = props.length===1 || this._prop[props[0]].type===Object/*props.length>1 must be Object*/;
@@ -423,7 +445,7 @@ class BeruangElement extends HTMLElement {
 				if(isProp) {
 					o.token = prop;
 					o.prop = prop;
-					this._pushPathToPropNames(props, propNames);
+					this._objPropPathToPropNames(props, propNames);
 				} else {
 				////trim singlequote or doublequote
 					if(/^'|'$/g.test(prop)){
@@ -439,19 +461,11 @@ class BeruangElement extends HTMLElement {
 	}
 		
 	_propValue(prop) {
-		let props = prop.split(/[.]/g);
-		let val;
-		if(props.length>1){
-			val = this[props[0]];
-			for(let i=1, n=props.length; i<n; i++) {
-				val = val[props[i]];
-			}
-		} else {
-			val = this[props[0]];
-		}
-		return val;	
+		let arr = this._objPropPathSplit(prop);
+		let rslt = this._objPropPathRef(arr);
+		return rslt.depth===1 ? rslt.obj : (!!rslt.obj ? rslt.obj[rslt.idx] : null);
 	}
-		
+				
 	_renderClass(cls) {
 		if(this._excludedRedrawClasses.indexOf(cls)>-1) {
 			return;
@@ -582,7 +596,14 @@ class BeruangElement extends HTMLElement {
 							if( idx==-1 ){
 								this._excludedRedrawClasses.push(cls);
 							}
-							this[prop] = el[att];
+							let arr = this._objPropPathSplit(prop);
+							let rslt = this._objPropPathRef(arr);
+							if(rslt.depth===1){
+								this[arr[0]] = el[att];
+							} else {
+								rslt.obj[rslt.idx] = el[att];
+								this._updateNode(prop);
+							}
 							if( idx==-1 ){
 								idx = this._excludedRedrawClasses.indexOf(cls);
 								if(idx>-1) {
