@@ -13,6 +13,13 @@ class MyElement extends BeruangElement {
 			show:{
 				value:false,
 				type:Boolean
+			},
+			grup: {
+				value: [
+				{nama:'Abdul Yadi', umur:50},
+				{nama:'Citra Larasati', umur:23}
+				],
+				type:Array
 			}
 		};
 	}
@@ -40,6 +47,9 @@ class MyElement extends BeruangElement {
 	<template if="[[show]]">
 		<div>[[orang.nama]]</div>
 	</template>
+</template>
+<template id="checkeach" each="[[grup]]" as="g">
+	<div>[[g.nama]]</div>
 </template>
 </div>
 `;
