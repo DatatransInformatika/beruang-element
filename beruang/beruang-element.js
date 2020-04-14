@@ -395,8 +395,6 @@ class BeruangElement extends HTMLElement {
 					format = '[[' + word + ']]';
 					fmt = format;
 				}
-				
-				
 				re = null;				
 				let props = this._objPropPathSplit(word);//break obj.path0.path1 into array [obj,path0,path1]
 				let params=[];
@@ -629,18 +627,6 @@ class BeruangElement extends HTMLElement {
 			} else {
 				el[att] = val;							
 			}			
-/*			let rslt = this._renderClassAttrValue(obj, el, cls, att);
-			if(!!rslt.el) {
-				if(att==='class$') {
-					if(!!rslt.el.beruangoldcls) {
-						rslt.el.classList.remove(rslt.el.beruangoldcls);
-					}
-					rslt.el.classList.add(rslt.val);
-					rslt.el.beruangoldcls = rslt.val;
-				} else {
-					rslt.el[att] = rslt.val;							
-				}
-			}*/		
 		}//for(let att in cam)	
 	}
 	
