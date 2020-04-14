@@ -114,7 +114,7 @@ class BeruangElement extends HTMLElement {
 			div = null;
 			let cls = this.nodeName.toLowerCase();						
 			let redrawClasses = [];			
-			this._propClsMapCreate(this.shadowRoot.firstElementChild, cls, redrawClasses, null);
+			this._propClsMapCreate(this.shadowRoot.firstElementChild, cls, redrawClasses, null);			
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._renderClass(redrawClasses[i]);
 			}			
@@ -289,7 +289,7 @@ class BeruangElement extends HTMLElement {
 				if(re.test(s)) {
 					atts.push(att);
 				}
-			}	
+			}
 			re=null;			
 			text = ele.firstChild && ele.firstChild.nodeType===3 ? ele.textContent : '';
 			if(atts.length===0 && text.length===0){
@@ -298,7 +298,7 @@ class BeruangElement extends HTMLElement {
 		}
 
 		let redraw = false;
-		for(let pn in this._prop) {
+		for(let pn in this._prop) {		
 			let propNames = [];
 			let tmplmatch = !!tmplMap ? this._propClsMapInitDoTmpl(ele, tmplMap, tmplText, pn, cls, propNames) : false; 
 			let attmatch = !!!tmplMap && atts.length>0 ? this._propClsMapInitDoAttr(ele, atts, pn, cls, propNames) : false;
@@ -339,7 +339,7 @@ class BeruangElement extends HTMLElement {
 		for(let i=0,n=arr.length;i<n;i++){
 			let fmt = arr[i];
 			let isfunc = refunc.test(fmt);
-			let isprop = !isfunc && reprop.test(fmt);
+			let isprop = !isfunc && reprop.test(fmt);			
 			if(!isfunc && !isprop){
 				continue;
 			}			
@@ -395,6 +395,8 @@ class BeruangElement extends HTMLElement {
 					format = '[[' + word + ']]';
 					fmt = format;
 				}
+				
+				
 				re = null;				
 				let props = this._objPropPathSplit(word);//break obj.path0.path1 into array [obj,path0,path1]
 				let params=[];
@@ -410,7 +412,7 @@ class BeruangElement extends HTMLElement {
 					if(!!event){
 						term['event']=event;
 					}
-					terms.push(term);
+					terms.push(term);					
 				}				
 			////is not a function:END
 			}
@@ -440,22 +442,27 @@ class BeruangElement extends HTMLElement {
 	}
 	
 	_propClsMapInitDoAttr(ele, atts, pn, cls, propNames) {
-		if(this._clsAttMap.hasOwnProperty(cls)){
-			return false;
-		}
+		let obj = this._clsAttMap[cls];
 		let found = false;
-		let obj = {};
 		for(let i=0,n=atts.length;i<n;i++){
-			let att = atts[i];
+			let att = atts[i];			
 			let fmt = ele.getAttribute(att);
 			let d = this._termMatch(fmt, pn, false, propNames);			
 			if(!!d){
 				found = true;
-				obj[att]=d;
+				if(!!!obj){					
+					obj = {};
+					this._clsAttMap[cls] = obj;
+				}
+				let attObj = obj[att];
+				if(!!!attObj){
+					obj[att] = d;
+				} else {
+					for(let j=0,m=d.terms.length;j<m;j++){
+						attObj.terms.push(d.terms[j]);
+					}					
+				}
 			}
-		}
-		if(found){
-			this._clsAttMap[cls]=obj;
 		}
 		return found;
 	}
@@ -642,23 +649,7 @@ class BeruangElement extends HTMLElement {
 		let terms = obj.terms;
 		for(let i=0,n=terms.length;i<n;i++){
 			let term = terms[i];
-			let s;
-			let params = term.params;
-			if(!!term.fname){//function
-				let arr = [];
-				for(let j=0,m=!!term.params ? term.params.length : 0;j<m;j++){
-					let param = params[j];
-					if(param.hasOwnProperty('prop')){
-						arr.push(this._propValue(param.prop));
-					} else {
-						arr.push(param.token);
-					}				
-				}
-				s = this[term.fname].apply(null, arr);					
-			} else {//not function
-				s = this._propValue(params[0].prop);
-			}
-			fmt = fmt.replace(term.fmt, s);
+			fmt = this._solveTerm(term, fmt);
 			if(	!!!term.fname && !!term.event /*two-way binding only for non-function*/
 				&& !!!el.beruangevent/*ensure unique event listener*/){
 				el.beruangevent = term.event;
@@ -667,7 +658,7 @@ class BeruangElement extends HTMLElement {
 					if( idx==-1 ){
 						this._excludedRedrawClasses.push(cls);
 					}
-					let prop = params[0].prop;
+					let prop = term.params[0].prop;//params[0].prop;
 					let arr = this._objPropPathSplit(prop);
 					let ref = this._objPropPathRef(arr);
 					ref.obj[ref.idx] = el[att];
@@ -691,26 +682,29 @@ class BeruangElement extends HTMLElement {
 		let fmt = obj.fmt;
 		let terms = obj.terms;
 		for(let i=0,n=terms.length;i<n;i++){
-			let term = terms[i];
-			let s;
-			let params = term.params;
-			if(!!term.fname){//a function
-				let arr = [];				
-				for(let j=0,m=params.length;j<m;j++){
-					let param = params[j];
-					if(param.hasOwnProperty('prop')){
-						arr.push(this._propValue(param.prop));
-					} else {
-						arr.push(param.token);
-					}
-				}
-				s = this[term.fname].apply(null, arr);		
-			} else {//not a function
-				s = this._propValue(params[0].prop);
-			}
-			fmt = fmt.replace(term.fmt, s);
+			fmt = this._solveTerm(terms[i], fmt);			
 		}
 		el.innerHTML = fmt;
+	}
+	
+	_solveTerm(term, fmt){
+		let s;
+		let params = term.params;
+		if(!!term.fname){//a function
+			let arr = [];				
+			for(let j=0,m=params.length;j<m;j++){
+				let param = params[j];
+				if(param.hasOwnProperty('prop')){
+					arr.push(this._propValue(param.prop));
+				} else {
+					arr.push(param.token);
+				}
+			}
+			s = this[term.fname].apply(null, arr);		
+		} else {//not a function
+			s = this._propValue(params[0].prop);
+		}
+		return fmt.replace(term.fmt, s);	
 	}
 ////render:END
 
