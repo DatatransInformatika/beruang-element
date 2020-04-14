@@ -30,19 +30,33 @@ class MyElement extends BeruangElement {
 :host h1 {color:red}
 :host .inp {color:green}
 </style>
-<div>
+<div>[[myLabel]]</div>
+<div>[[upper(myLabel)]]</div>
+<div>[[myLabel]] [[upper(myLabel)]]</div>
+<div>[[myLabel]] [[upper(myLabel)]] check</div>
+<div id='test'><span>[[myLabel]]</span> <span><b>and</b></span>  <span>[[upper(myLabel)]]</span></div>
+<input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[myLabel]]">
+<input id="inp2" class="inp" type="text" id="fname2" name="fname2" value="[[upper(myLabel)]]">
+<input id="inp3" class="inp" type="text" id="fname3" name="fname3" value="[[myLabel]] [[upper(myLabel)]]">
+<input id="inp4" class="inp" type="text" id="fname4" name="fname4" value="[[myLabel]] and [[upper(myLabel)]]">
+<input id="inp5" class="inp" type="text" id="fname5" name="fname5" value="[[myLabel:change]]">
+
+<!--
 <template if="[[show]]">
 	<div>[[sapa]]</div>
 	<template if="[[show]]">
 		<div>[[myLabel]]</div>
 	</template>
 </template>
-<h1>[[decorate(sapa, orang.hobby, orang.nama)]]</h1>
-<h2>Hello2 [[sapa]] [[orang.nama]] [[orang.hobby]] ya!</h2>
-<div>[[myLabel]]</div>
+-->
+<!--<h1>[[decorate(sapa, orang.hobby, orang.nama)]]</h1>
+<h2>Hello2 [[sapa]] [[orang.nama]] [[orang.hobby]] ya!</h2>-->
+
+
+<!--
 <input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[upper(myLabel)]]">
 <input id="inp2" class$="[[cls]]" type="text" id="fname2" name="fname2" value="ok [[sapa]] [[myLabel]]">
-<input id="inp3" class="inp" type="text" id="fname2" name="fname2" value="[[orang.nama:change]]"> <!-- two-way on change-event -->
+<input id="inp3" class="inp" type="text" id="fname2" name="fname2" value="[[orang.nama:change]]">
 <template if="[[show]]"><div>[[sapa]]</div>
 	<template if="[[show]]">
 		<div>[[orang.nama]]</div>
@@ -51,7 +65,7 @@ class MyElement extends BeruangElement {
 <template id="checkeach" each="[[grup]]" as="g">
 	<div>[[g.nama]] [[g.umur]]</div>
 </template>
-</div>
+-->
 `;
 	}
 	
