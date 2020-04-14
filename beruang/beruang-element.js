@@ -5,7 +5,7 @@ class BeruangElement extends HTMLElement {
 		this._prop = {};
 		this._propClsMap = {};/*property to class map, a property map to array of class {<prop>:[cls, cls, cls]}*/
 		this._clsTextMap = {};/*class to element text processing map {<cls>:{fmt:.., params:[{token:..,prop:..}], fname:...}}*/
-		this._clsAttMap = {};/*class to element tag attribute processing map {<cls>:{<att>:{params:[{token:..,prop:..}], fname:..., event:...}}}*/
+		this._clsAttMap = {};/*class to element tag attribute processing map {<cls>:{<att>:{fmt:..., params:[{token:..,prop:..}], fname:..., event:...}}}*/
 		this._clsIfMap = {};/*class to if template map {<cls>:{props:[...], fname:...}}*/
 		this._clsEachMap = {};/*class to each template map {<cls>:{props:[...], fname:...}}*/
 		this._observerPropsMap = {};//{func:[array of properties]}
@@ -179,7 +179,7 @@ class BeruangElement extends HTMLElement {
 	}
 	
 	_updateNode(pn) {
-		let classes = this._propClsMap[pn];
+		let classes = this._propClsMap[pn];		
 		for(let i=0, n=!!classes ? classes.length : 0; i<n; i++) {
 			this._renderClass(classes[i]);
 		}		
@@ -225,7 +225,8 @@ class BeruangElement extends HTMLElement {
 			}
 			re=null;
 		} else {
-			let re = new RegExp('^\\s*[\\[]{2}[^\\[]+[\\]]{2}\\s*$', 'g');
+			//let re = new RegExp('^\\s*[\\[]{2}[^\\[]+[\\]]{2}\\s*$', 'g');
+			let re = new RegExp('\\s*[\\[]{2}[^\\[]+[\\]]{2}\\s*', 'g');
 			for (let i=0, attrs=ele.attributes, n=attrs.length; i<n; i++){
 				let att = attrs[i].nodeName;
 				let s = ele.getAttribute(att);
@@ -320,7 +321,7 @@ class BeruangElement extends HTMLElement {
 					this._clsAttMap[cls] = cam;
 				}
 				if(!cam.hasOwnProperty(att)) {
- 					let obj = {}; //<att>:{params:[{token:...,prop:...}], fname:..., event:...}
+ 					let obj = {'fmt':s}; //<att>:{fmt:..., params:[{token:...,prop:...}], fname:..., event:...}
  					let params = []; //{token:s,prop:p}
  					if(mtch.propMatch) {//propety, not a function
  						this._propInit(s, params, propNames);
@@ -577,17 +578,24 @@ class BeruangElement extends HTMLElement {
 		let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
 		let elrun = elstart;
 		let i=0;
+/*			ele.beruangtmpleach = {
+				'as':ele.getAttribute('as') || 'item',
+				'idx':ele.getAttribute('idx') || 'i'
+			};*/		
 		let re = new RegExp('[\\[]{2}' + el.beruangtmpleach.as + '[.]', 'g');
 		let prop = obj.params[0].prop;
 		while(!!elrun && elrun!==el) {
 			el.beruangtmplchildren.push(elrun);
 			let t = elrun.firstChild ? elrun.firstChild.textContent : '';
 			if(t.length>0){
-				elrun.firstChild.textContent = t.replace(re, '[[' + prop + '.' + (i++) + '.');
+//to do: handle function
+				//elrun.firstChild.textContent = t.replace(re, '[[' + prop + '.' + (i++) + '.');
+				elrun.firstChild.textContent = t.replace(re, '[[' + prop + '.' + (i++) + '.');				
 			}
 			elrun.beruangtmplparent=el;
 			elrun = elrun.nextElementSibling;
-		}					
+		}
+		re = null;					
 		let redrawClasses = [];
 		this._propClsMapInit(elstart, el.beruangcls, redrawClasses, el);
 		for(let i=0, n=redrawClasses.length; i<n; i++) {
@@ -602,7 +610,7 @@ class BeruangElement extends HTMLElement {
 			if(!!rslt.el) {
 				if(att==='class$') {
 					if(!!rslt.el.beruangoldcls) {
-						rslt.el.classList.remove(rslt.el.beruangcls);
+						rslt.el.classList.remove(rslt.el.beruangoldcls);
 					}
 					rslt.el.classList.add(rslt.val);
 					rslt.el.beruangoldcls = rslt.val;
@@ -630,8 +638,17 @@ class BeruangElement extends HTMLElement {
 		} else {//not a function
 			if(!!obj.params && obj.params.length>0) {
 				rslt.el = el;
-				let prop = obj.params[0].prop;
-				rslt.val = this._propValue(prop);
+				if(obj.params.length>1) {//treated as string
+					let s = obj.fmt;
+					for(let i=0,n=obj.params.length;i<n;i++){
+						let p = obj.params[i];
+						s = s.replace(p.token, this._propValue(p.prop));
+					}
+					rslt.val = s;				
+				} else {
+					let prop = obj.params[0].prop;
+					rslt.val = this._propValue(prop);				
+				}
 			////two way binding:
 				if(!!obj.event) {
 					if(!!!el.beruangevent) {
