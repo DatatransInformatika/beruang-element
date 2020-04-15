@@ -425,17 +425,18 @@ class BeruangElement extends HTMLElement {
 			return false;
 		}			
 		let negation = tmplMap===this._clsIfMap;
-		let terms = this._termMatch(text, pn, negation, propNames);
-		if(terms.length==0){
+		let d = this._termMatch(text, pn, negation, propNames);
+		if(!!!d){
 			return false;
 		}
-		tmplMap[cls] = {'t':{'terms':terms}};
+		tmplMap[cls] = {'t':d};
 		if(tmplMap==this._clsEachMap) {
 			ele.beruangtmpleach = {
 				'as':ele.getAttribute('as') || 'item',
 				'idx':ele.getAttribute('idx') || 'i'
 			};			
-		}		
+		}	
+
 		return true;
 	}
 	
@@ -514,13 +515,11 @@ class BeruangElement extends HTMLElement {
 		}
 	}
 	
-	_renderClassIf(obj, el) {
-/*		let rslt = this._renderClassAttrValue(obj, el, null, null);
-		if(!!!rslt.el) {
-			return;
-		}
-		let show = el.beruangtmplnegate ? !!!rslt.val : !!rslt.val;
-		if(show) {
+	_renderClassIf(ctm, el) {
+		let obj = ctm['t'];
+		let val = this._renderClassAttrValue(obj, el, null, null);
+		let show = obj.fmt.charAt(0)==='!' ? !val : val;
+		if(show){
 			let tmplparenthidden=false;
 			let tmplparent;
 			let t = el;
@@ -545,14 +544,14 @@ class BeruangElement extends HTMLElement {
 					elrun = elrun.nextElementSibling;
 				}					
 				let redrawClasses = [];
-				this._propClsMapInit(elstart, el.beruangcls, redrawClasses, el);
+				this._propClsMapCreate(elstart, el.beruangcls, redrawClasses, el);
 				for(let i=0, n=redrawClasses.length; i<n; i++) {
 					this._renderClass(redrawClasses[i]);
 				}
-			}
+			}		
 		} else {
 			this._tmplHide(el);
-		}*/
+		};
 	}
 	
 	_tmplHide(el) {
@@ -660,6 +659,9 @@ class BeruangElement extends HTMLElement {
 				});			
 			}
 		}
+//if(el.id==='tmpl1'){
+//console.log('value', fmt);
+//}		
 		return fmt;
 	}
 	
@@ -690,7 +692,7 @@ class BeruangElement extends HTMLElement {
 		} else {//not a function
 			s = this._propValue(params[0].prop);
 		}
-		return fmt.replace(term.fmt, s);	
+		return term.fmt===fmt ? s/*so boolean is not converted to string*/ : fmt.replace(term.fmt, s);	
 	}
 ////render:END
 

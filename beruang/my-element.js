@@ -41,6 +41,8 @@ class MyElement extends BeruangElement {
 <input id="inp4" class="inp" type="text" id="fname4" name="fname4" value="[[myLabel]] and [[upper(myLabel)]]">
 <input id="inp5" class="inp" type="text" id="fname5" name="fname5" value="[[myLabel:change]]">
 <input id="inp6" class$="[[cls]]" type="text" id="fname5" name="fname6" value="ok [[sapa]] [[myLabel]]">
+<template id="tmpl1" if="[[show]]"><div>show [[sapa]]</div></template>
+<template id="tmpl1" if="![[show]]"><div>!show [[sapa]]</div></template>
 
 <!--
 <template if="[[show]]">
