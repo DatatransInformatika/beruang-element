@@ -43,6 +43,9 @@ class MyElement extends BeruangElement {
 <input id="inp6" class$="[[cls]]" type="text" id="fname5" name="fname6" value="ok [[sapa]] [[myLabel]]">
 <template id="tmpl1" if="[[show]]"><div>show [[sapa]]</div></template>
 <template id="tmpl1" if="![[show]]"><div>!show [[sapa]]</div></template>
+<template id="checkeach" each="[[grup]]" as="g">
+	<div>[[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
+</template>
 
 <!--
 <template if="[[show]]">
