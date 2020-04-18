@@ -128,6 +128,27 @@ class BeruangElement extends HTMLElement {
 	static get observers() {
 		return null;
 	}
+	
+	setPath(path, value) {
+		let arr = this._objPropPathSplit(path);
+		let ref = this._objPropPathRef(arr);
+		ref.obj[ref.idx] = value;
+		if(ref.obj!==this) {
+			this.renderPath(path);
+		}		
+	}
+	
+	getPath(path) {
+		let arr = this._objPropPathSplit(path);
+		return this._objPropPathRef(arr).val;
+	}
+	
+	renderPath(path) {
+		let classes = this._propClsMap[path];		
+		for(let i=0,n=!!classes ? classes.length : 0; i<n; i++) {
+			this._renderClass(classes[i]);
+		}	
+	}
 		
 /////initialization:BEGIN	
 	_initProp() {
@@ -177,7 +198,7 @@ class BeruangElement extends HTMLElement {
 					}					
 					if(changed) {
 					////update elements
-						this._renderNode(pn);
+						this.renderPath(pn);
 					////dedicated observer for the property	
 						let obs = this._prop[pn].observer;
 						if(!!obs) {
@@ -499,13 +520,6 @@ class BeruangElement extends HTMLElement {
 /////class map config creation:BEGIN	
 
 ////render:BEGIN	
-	_renderNode(pn) {
-		let classes = this._propClsMap[pn];		
-		for(let i=0, n=!!classes ? classes.length : 0; i<n; i++) {
-			this._renderClass(classes[i]);
-		}		
-	}
-				
 	_renderClass(cls) {
 		if(this._excludedRedrawClasses.indexOf(cls)>-1) {
 			return;
@@ -761,13 +775,8 @@ class BeruangElement extends HTMLElement {
 					if( idx==-1 ){
 						this._excludedRedrawClasses.push(cls);
 					}
-					let prop = term.params[0].prop;//params[0].prop;
-					let arr = this._objPropPathSplit(prop);
-					let ref = this._objPropPathRef(arr);
-					ref.obj[ref.idx] = el[att];
-					if(ref.obj!==this) {
-						this._renderNode(prop);
-					}							
+					let prop = term.params[0].prop;//params[0].prop;					
+					this.setPath(prop, el[att]);
 					if( idx==-1 ){
 						idx = this._excludedRedrawClasses.indexOf(cls);
 						if(idx>-1) {
@@ -798,14 +807,14 @@ class BeruangElement extends HTMLElement {
 			for(let j=0,m=params.length;j<m;j++){
 				let param = params[j];
 				if(param.hasOwnProperty('prop')){
-					arr.push(this._propValue(param.prop));
+					arr.push(this.getPath(param.prop));
 				} else {
 					arr.push(param.token);
 				}
 			}
 			s = this[term.fname].apply(null, arr);		
 		} else {//not a function
-			s = this._propValue(params[0].prop);
+			s = this.getPath(params[0].prop);
 		}
 		return term.fmt===fmt ? s/*so boolean is not converted to string*/ : fmt.replace(term.fmt, s);	
 	}
@@ -828,11 +837,6 @@ class BeruangElement extends HTMLElement {
 	
 	_removeBrackets(s){
 		return s.replace(/^[\[]{2}|[\]]{2}$/g, '');//remove double brackets
-	}
-	
-	_propValue(prop) {
-		let arr = this._objPropPathSplit(prop);
-		return this._objPropPathRef(arr).val;
 	}
 	
 	_objPropPathSplit(s) {/*object and its properties path: obj.prop1.prop2...*/
