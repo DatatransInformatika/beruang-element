@@ -144,6 +144,9 @@ class BeruangElement extends HTMLElement {
 			} else {
 				if(prop[pn].hasOwnProperty('value')){
 					_val = prop[pn].value;
+					if(typeof(_val)==='function'){
+						_val = _val();
+					}					
 				} else {
 					if(_typ===Boolean){
 						_val = true;
@@ -373,11 +376,7 @@ class BeruangElement extends HTMLElement {
 					let prop = args[i];
 					if(prop.length>0){
 						let props = this._objPropPathSplit(prop);//break obj.path0.path1 into array [obj,path0,path1]
-						let isProp = false;
-						if(properties.hasOwnProperty(props[0])) {
-							isProp = props.length===1
-								|| properties[props[0]].type===Object || properties[props[0]].type===Array/*props.length>1 must be Object*/;
-						}											
+						let isProp = this._isProperty(properties, props);
 						let o = {};
 						if(isProp) {
 							o.prop = prop; //registered property
@@ -413,13 +412,18 @@ class BeruangElement extends HTMLElement {
 				re = null;				
 				let props = this._objPropPathSplit(word);//break obj.path0.path1 into array [obj,path0,path1]
 				let params=[];
-				if(properties.hasOwnProperty(props[0])) {
-					if(props.length===1/*primitive type*/ || properties[props[0]].type===Object || properties[props[0]].type===Array) {
-						params.push({'prop':word});
-						this._objPropPathToPropNames(props, propNames);//store obj.path0.path1 into propNames
-							//in order: obj=>propNames, obj.path0=>propNames, obj.path0.path1=>propNames					
-					}
+				if(this._isProperty(properties, props)){
+					params.push({'prop':word});
+					this._objPropPathToPropNames(props, propNames);//store obj.path0.path1 into propNames
+						//in order: obj=>propNames, obj.path0=>propNames, obj.path0.path1=>propNames									
 				}				
+// 				if(properties.hasOwnProperty(props[0])) {
+// 					if(props.length===1/*primitive type*/ || properties[props[0]].type===Object || properties[props[0]].type===Array) {
+// 						params.push({'prop':word});
+// 						this._objPropPathToPropNames(props, propNames);//store obj.path0.path1 into propNames
+// 							//in order: obj=>propNames, obj.path0=>propNames, obj.path0.path1=>propNames					
+// 					}
+// 				}				
 				if(params.length>0){//non function must have params
 					let term = {'fmt': fmt, 'params':params};
 					if(!!event){
@@ -551,9 +555,17 @@ class BeruangElement extends HTMLElement {
 				el.beruangtmplchildren = [];
 				let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
 				let elrun = elstart;
+				let tmplparent;
 				while(!!elrun && elrun!==el) {
 					el.beruangtmplchildren.push(elrun);
 					elrun.beruangtmplparent=el;
+					tmplparent = el;
+					while(!!tmplparent){
+						if(!!el.beruangsolveeach){
+							this._solveEach(elrun, el.beruangsolveeach.as, el.beruangsolveeach.idx, el.beruangsolveeach.pn, el.beruangsolveeach.i)
+						}
+						tmplparent = tmplparent.beruangtmplparent;
+					}
 					elrun = elrun.nextElementSibling;
 				}					
 				let redrawClasses = [];
@@ -587,81 +599,95 @@ class BeruangElement extends HTMLElement {
 		}		
 	}
 	
-	_tmplEachSubstitute(ele, as, idx, pn, i, findSibling) {
+	_tmplEachSolve(ele, as, idx, pn, i, findSibling) {
 		while(!!ele) {
-			this._tmplEachSubstituteDo(ele, as, idx, pn, i);		
-			this._tmplEachSubstitute(ele.firstElementChild, as, idx, pn, i, true);//recursive
+			this._solveEach(ele, as, idx, pn, i);
+			this._tmplEachSolve(ele.firstElementChild, as, idx, pn, i, true);//recursive
 			ele = findSibling ? ele.nextElementSibling : null;
 		}
 	}
 	
-	_tmplEachSubstituteDo(ele, as, idx, pn, i) {
-		let prepare = this._configMapPrepare(ele);
-		if(!!!prepare){
-			return;
+	_solveEach(ele, as, idx, pn, i) {
+		let properties = [];
+		properties[as]={
+			'type':Object, 'value':pn, 'conf':{
+			'refunc':new RegExp('^' + as + '[.]'), 'rplcfunc':pn + '.' + i + '.',
+			're':new RegExp('([\\[]{2})(' + as + '[.])(.+)'), 'rplc':'$1' + pn + '.' + i + '.$3'
+			}};
+		properties[idx]={
+			'type':Number, 'value':i, 'conf':{
+			'refunc':new RegExp('^' + idx + '$'), 'rplcfunc':i,
+			're':new RegExp('([\\[]{2})(' + idx + ')([\\]]{2})'), 'rplc':i
+			}};
+		for(let p in properties){
+			let prepare = this._configMapPrepare(ele);
+			if(!!!prepare){
+				return;
+			}			
+			let tmplMap={};
+			let attMap={};
+			let textMap={};		
+			let propNames = [];					
+			let init = this._configMapInit(properties, prepare, ele, 'c', p, tmplMap, tmplMap, attMap, textMap, propNames);			
+			let prop = properties[p];
+			if(init.tmplmatch){//template if or each
+ 				ele.setAttribute(prepare.tmplType, this._solveEachDo(tmplMap['c']['t'], p, prop.value, prop.conf));
+ 				if(!ele.hasOwnProperty('beruangsolveeach')){
+ 					ele.beruangsolveeach={'as':as,'idx':idx,'pn':pn,'i':i};					
+ 				}			
+			}	
+			if(init.attmatch){//attribute
+ 				let config = attMap['c'];
+ 				for(let att in config){				
+ 					ele.setAttribute(att, this._solveEachDo(config[att], p, prop.value, prop.conf));
+ 				};		
+			}
+			if(init.textmatch){//text content
+				ele.innerHTML = this._solveEachDo(textMap['c']['t'], p, prop.value, prop.conf);				
+			}
+			prepare = null;
+			init = null;
 		}
-		let tmplMap={};
-		let attMap={};
-		let textMap={};		
-		let propNames = [];
-		let properties = {};		
-		let refunc = new RegExp('^' + as + '[.]');
-		let rplcfunc = pn + '.' + i + '.';
-		let re = new RegExp('([\\[]{2})(' + as + '[.])(.+)');
-		let rplc = '$1' + pn + '.' + i + '.$3';		
-	////as:BEGIN	
-		properties[as] = {'type':Object};
-		let init = this._configMapInit(properties, prepare, ele, 'c'/*cls*/, as, tmplMap, tmplMap, attMap, textMap, propNames);
-		if(init.tmplmatch){//template if or each
-			let map = tmplMap['c']['t'];
-			ele.setAttribute(prepare.tmplType, this._solveEach(map, refunc, rplcfunc, re, rplc));
-//todo:when solve "if" replace pn and i with this: 			
-			ele.beruangeachtmplprop={};
-			ele.beruangeachtmplprop[as] = pn;
-			ele.beruangeachtmplprop[idx] = i;
-		}
-		if(init.attmatch){//attribute
-			let config = attMap['c'];
-			for(let att in config){				
-				let map = config[att];
-				ele.setAttribute(att, this._solveEach(map, refunc, rplcfunc, re, rplc));
-			};			
-		}
-		if(init.textmatch){
-			let map = textMap['c']['t'];
-			ele.innerHTML = this._solveEach(map, refunc, rplcfunc, re, rplc);
-		}
-	////as:END
-	////i:BEGIN
-	
-	////i:END	
-		refunc = null;
-		re = null;				
+		properties = null;		
 	}
 	
-	_solveEach(map, refunc, rplcfunc, re, rplc) {
+	_solveEachDo(map, pn, val, conf) {
 		let fmt = map.fmt;
 		for(let i=0,n=map.terms.length;i<n;i++){
 			let term = map.terms[i];
-			if(!!term.fname){//a function
-				let token = '[[' + term.fname + '(';
+			if(!!term.fname){//a function				
 				let f = this._removeBrackets(term.fmt);
 				let args = this._funcArgs(f);
-				for(let j=0,m=args.length;j<m;j++){
-					if(j>0){
-						token += ',';
-					}
-					let arg = args[j];
-					if(refunc.test(arg)){
-						token += arg.replace(refunc, rplcfunc);
-					} else {
-						token += arg;		
+				let len = args.length;
+				let solved = false;
+				let token;
+				if(typeof(this[term.fname])==='function' && len<=1){
+					if(len==0){
+						token = this[term.fname].apply(null, null);
+						solved = true;
+					} else if(args[0]===pn) {
+						token = this[term.fname].apply(null, [val]);
+						solved = true;
 					}
 				}
-				token += ')]]';
+				if(!solved){	
+					token = '[[' + term.fname + '(';
+					for(let j=0;j<len;j++){
+						if(j>0){
+							token += ',';
+						}
+						let arg = args[j];
+						if(conf['refunc'].test(arg)){
+							token += arg.replace(conf['refunc'], conf['rplcfunc']);
+						} else {
+							token += arg;		
+						}
+					}
+					token += ')]]';
+				}
 				fmt = fmt.replace(term.fmt, token);
 			} else {//not a function
-				fmt = fmt.replace(term.fmt, term.fmt.replace(re, rplc));
+				fmt = fmt.replace(term.fmt, term.fmt.replace(conf['re'], conf['rplc']));
 			}
 		}
 		return fmt;		
@@ -677,16 +703,17 @@ class BeruangElement extends HTMLElement {
 		}
 		let pn = obj.terms[0].params[0].prop;
 		el.beruangtmplchildren = [];
+		let sibling = el.previousElementSibling;
 		for(let i=0, n=arr.length; i<n; i++){
-			let sibling = el.previousElementSibling;
 			let clone = document.importNode(el.content, true);			
 			el.parentNode.insertBefore(clone, el);
 			let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
 			let elrun = elstart;
 			while(!!elrun && elrun!==el) {
-				this._tmplEachSubstitute(elrun, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
+				this._solveEach(elrun, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
 				el.beruangtmplchildren.push(elrun);
 				elrun.beruangtmplparent=el;
+				sibling = elrun;
 				elrun = elrun.nextElementSibling;
 			}						
 		}		
@@ -803,6 +830,14 @@ class BeruangElement extends HTMLElement {
 	
 	_objPropPathSplit(s) {/*object and its properties path: obj.prop1.prop2...*/
 		return s.split(/[.]/g);
+	}
+	
+	_isProperty(properties, props) {
+		if(properties.hasOwnProperty(props[0])) {
+			return props.length===1
+				|| properties[props[0]].type===Object || properties[props[0]].type===Array/*props.length>1 must be Object*/;
+		}
+		return false;
 	}
 
 	_objPropPathRef(props) {

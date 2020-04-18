@@ -15,12 +15,13 @@ class MyElement extends BeruangElement {
 				type:Boolean
 			},
 			grup: {
-				value: [
-				{nama:'Abdul Yadi', umur:50, show:true},
-				{nama:'Citra Larasati', umur:23, show:false}
-				],
+				value: ()=>{return [
+					{nama:'Abdul Yadi', umur:50, show:true},
+					{nama:'Citra Larasati', umur:23, show:false}
+					];
+				},
 				type:Array
-			}
+			}		
 		};
 	}
 
@@ -44,37 +45,11 @@ class MyElement extends BeruangElement {
 <template id="tmpl1" if="[[show]]"><div>show [[sapa]]</div></template>
 <template id="tmpl1" if="![[show]]"><div>!show [[sapa]]</div></template>
 <template id="checkeach" each="[[grup]]" as="g">
-<div>[[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
+<div id='plusone'>[[i]] [[_plusOne(i)]] [[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
 <input id="inp7" class="inp" type="text" id="fname-each1" name="fname-each1" value="[[g.nama]]">
 <input id="inp8" class="inp" type="text" id="fname-each2" name="fname-each2" value="[[upper(g.nama)]]">
-<template id="tmpl2" if="[[g.show]]"><div>show [[g.nama]]</div></template>
+<template id="tmpl2" if="[[g.show]]"><div id="divtmpl">show [[i]] [[_plusOne(i)]] [[g.nama]] [[myLabel]]</div></template>
 </template>
-
-<!--
-<template if="[[show]]">
-	<div>[[sapa]]</div>
-	<template if="[[show]]">
-		<div>[[myLabel]]</div>
-	</template>
-</template>
--->
-<!--<h1>[[decorate(sapa, orang.hobby, orang.nama)]]</h1>
-<h2>Hello2 [[sapa]] [[orang.nama]] [[orang.hobby]] ya!</h2>-->
-
-
-<!--
-<input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[upper(myLabel)]]">
-<input id="inp2" class$="[[cls]]" type="text" id="fname2" name="fname2" value="ok [[sapa]] [[myLabel]]">
-<input id="inp3" class="inp" type="text" id="fname2" name="fname2" value="[[orang.nama:change]]">
-<template if="[[show]]"><div>[[sapa]]</div>
-	<template if="[[show]]">
-		<div>[[orang.nama]]</div>
-	</template>
-</template>
-<template id="checkeach" each="[[grup]]" as="g">
-	<div>[[g.nama]] [[g.umur]]</div>
-</template>
--->
 `;
 	}
 	
@@ -96,6 +71,10 @@ class MyElement extends BeruangElement {
 	
 	_sapaLabelChanged(sapa, label) {
 		console.log('_sapaLabelChanged', sapa, label);
+	}
+	
+	_plusOne(i){
+		return i+1;
 	}
 }
 
