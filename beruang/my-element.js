@@ -37,14 +37,16 @@ class MyElement extends BeruangElement {
 <div id='test'><span>[[myLabel]]</span> <span><b>and</b></span>  <span>[[upper(myLabel)]]</span></div>
 <input id="inp1" class="inp" type="text" id="fname1" name="fname1" value="[[myLabel]]">
 <input id="inp2" class="inp" type="text" id="fname2" name="fname2" value="[[upper(myLabel)]]">
-<input id="inp3" class="inp" type="text" id="fname3" name="fname3" value="[[myLabel]] [[upper(myLabel)]]">
+<input id="inp3" class="inp" type="text" id="fname3" name="fname3" value="[[myLabel]] [[upper( myLabel  )]]">
 <input id="inp4" class="inp" type="text" id="fname4" name="fname4" value="[[myLabel]] and [[upper(myLabel)]]">
 <input id="inp5" class="inp" type="text" id="fname5" name="fname5" value="[[myLabel:change]]">
 <input id="inp6" class$="[[cls]]" type="text" id="fname5" name="fname6" value="ok [[sapa]] [[myLabel]]">
 <template id="tmpl1" if="[[show]]"><div>show [[sapa]]</div></template>
 <template id="tmpl1" if="![[show]]"><div>!show [[sapa]]</div></template>
 <template id="checkeach" each="[[grup]]" as="g">
-	<div>[[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
+<div>[[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
+<input id="inp7" class="inp" type="text" id="fname-each1" name="fname-each1" value="[[g.nama]]">
+<input id="inp8" class="inp" type="text" id="fname-each2" name="fname-each2" value="[[upper(g.nama)]]">
 </template>
 
 <!--

@@ -305,14 +305,11 @@ class BeruangElement extends HTMLElement {
 	}
 	
 	_configMapInit(properties, prepare, ele, cls, pn, ifMap, eachMap, attMap, textMap, propNames) {
-		let tmplmatch = !!prepare.tmplType ? this._propClsMapInitDoTmpl(properties, ele, prepare.tmplType, prepare.tmplType==='if' ? ifMap : eachMap, prepare.tmplText, pn, cls, propNames) : false; 
-		let attmatch = !!!prepare.tmplType && prepare.atts.length>0 ? this._propClsMapInitDoAttr(properties, ele, prepare.atts, pn, cls, propNames, attMap) : false;
-		let textmatch = !!!prepare.tmplType && prepare.text.length>0 ? this._propClsMapInitDoText(properties, prepare.text, pn, cls, propNames, textMap) : false;
-		return {
-			'tmplmatch':tmplmatch,
-			'attmatch':attmatch,
-			'textmatch':textmatch		
-		};
+		let rslt = {};
+		rslt['tmplmatch'] = !!prepare.tmplType ? this._propClsMapInitDoTmpl(properties, ele, prepare.tmplType, prepare.tmplType==='if' ? ifMap : eachMap, prepare.tmplText, pn, cls, propNames) : false; 
+		rslt['attmatch'] = !!!prepare.tmplType && prepare.atts.length>0 ? this._propClsMapInitDoAttr(properties, ele, prepare.atts, pn, cls, propNames, attMap) : false;
+		rslt['textmatch'] = !!!prepare.tmplType && prepare.text.length>0 ? this._propClsMapInitDoText(properties, prepare.text, pn, cls, propNames, textMap) : false;
+		return rslt;
 	}
 	
 	_propClsMapCreateDo(ele, cls, redrawClasses) {
@@ -346,7 +343,7 @@ class BeruangElement extends HTMLElement {
 	}	
 	
 	_termMatch(properties, text, pn, negation, propNames) { //break text into terms
-		let refunc = new RegExp('[\\[]{2}\\S+[(](.+,\\s*)*' + pn + '([.]\\S+)*(\\s*,.+)*[)][\\]]{2}');//function terms
+		let refunc = new RegExp('[\\[]{2}\\S+[(]\\s*(.+,\\s*)*' + pn + '([.]\\S+)*(\\s*,.+)*\\s*[)][\\]]{2}');//function terms
 		let reprop = new RegExp('[\\[]{2}' + pn + '([.]\\S+)*([:]\\S+){0,1}[\\]]{2}');//property terms		
 		let mtch = refunc.test(text) || reprop.test(text);
 		if(!mtch){
@@ -358,12 +355,12 @@ class BeruangElement extends HTMLElement {
 		let format = text;
 		re = null;		
 		for(let i=0,n=arr.length;i<n;i++){
-			let fmt = arr[i];
+			let fmt = arr[i];			
 			let isfunc = refunc.test(fmt);
 			let isprop = !isfunc && reprop.test(fmt);			
 			if(!isfunc && !isprop){
 				continue;
-			}			
+			}
 			let word = fmt;
 			if(word.charAt(0)==='!'){
 				word = word.slice(1);
@@ -607,7 +604,11 @@ class BeruangElement extends HTMLElement {
 		let attMap={};
 		let textMap={};		
 		let propNames = [];
-		let properties = {};
+		let properties = {};		
+		let refunc = new RegExp('^' + as + '[.]');
+		let rplcfunc = pn + '.' + i + '.';
+		let re = new RegExp('([\\[]{2})(' + as + '[.])(.+)');
+		let rplc = '$1' + pn + '.' + i + '.$3';		
 	////as:BEGIN	
 		properties[as] = {'type':Object};
 		let init = this._configMapInit(properties, prepare, ele, 'c'/*cls*/, as, tmplMap, tmplMap, attMap, textMap, propNames);
@@ -615,48 +616,52 @@ class BeruangElement extends HTMLElement {
 			//to do
 		}
 		if(init.attmatch){//attribute
-			//to do
+			let config = attMap['c'];
+			for(let att in config){				
+				let map = config[att];
+				ele.setAttribute(att, this._solveEach(map, refunc, rplcfunc, re, rplc));
+			};			
 		}
 		if(init.textmatch){
-			let refunc = new RegExp('^' + as + '[.]');
-			let rplcfunc = pn + '.' + i + '.';
-			let re = new RegExp('([\\[]{2})(' + as + '[.])(.+)');
-			let rplc = '$1' + pn + '.' + i + '.$3';
-			let map = textMap['c']['t'];
-			let fmt = map.fmt;
-			for(let i=0,n=map.terms.length;i<n;i++){
-				let term = map.terms[i];
-				if(!!term.fname){//a function
-					let token = '[[' + term.fname + '(';
-					let f = this._removeBrackets(term.fmt);
-					let args = this._funcArgs(f);
-					for(let j=0,m=args.length;j<m;j++){
-						if(j>0){
-							token += ',';
-						}
-						let arg = args[j];
-						if(refunc.test(arg)){
-							token += arg.replace(refunc,rplcfunc);											
-						} else {
-							token += arg;		
-						}
-					}
-					token += ')]]';
-					fmt = fmt.replace(term.fmt, token);
-				} else {//not a function
-					fmt = fmt.replace(term.fmt, term.fmt.replace(re, rplc));
-				}
-			}
-			refunc = null;
-			re = null;
-			ele.innerHTML = fmt;
+			let map = textMap['c']['t'];			
+			ele.innerHTML = this._solveEach(map, refunc, rplcfunc, re, rplc);
 		}
 	////as:END
 	////i:BEGIN
 	
-	////i:END
+	////i:END	
+		refunc = null;
+		re = null;				
 	}
 	
+	_solveEach(map, refunc, rplcfunc, re, rplc) {
+		let fmt = map.fmt;
+		for(let i=0,n=map.terms.length;i<n;i++){
+			let term = map.terms[i];
+			if(!!term.fname){//a function
+				let token = '[[' + term.fname + '(';
+				let f = this._removeBrackets(term.fmt);
+				let args = this._funcArgs(f);
+				for(let j=0,m=args.length;j<m;j++){
+					if(j>0){
+						token += ',';
+					}
+					let arg = args[j];
+					if(refunc.test(arg)){
+						token += arg.replace(refunc, rplcfunc);
+					} else {
+						token += arg;		
+					}
+				}
+				token += ')]]';
+				fmt = fmt.replace(term.fmt, token);
+			} else {//not a function
+				fmt = fmt.replace(term.fmt, term.fmt.replace(re, rplc));
+			}
+		}
+		return fmt;		
+	}
+		
 	_renderClassEach(ctm, el) {
 		this._tmplHide(el);
 		el.beruangtmplshown=true;//each template always shown
@@ -668,12 +673,17 @@ class BeruangElement extends HTMLElement {
 		let pn = obj.terms[0].params[0].prop;
 		el.beruangtmplchildren = [];
 		for(let i=0, n=arr.length; i<n; i++){
+			let sibling = el.previousElementSibling;
 			let clone = document.importNode(el.content, true);			
 			el.parentNode.insertBefore(clone, el);
-			let item = el.previousElementSibling;
-			this._tmplEachSubstitute(item, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
-			el.beruangtmplchildren.push(item);
-			item.beruangtmplparent=el;
+			let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
+			let elrun = elstart;
+			while(!!elrun && elrun!==el) {
+				this._tmplEachSubstitute(elrun, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
+				el.beruangtmplchildren.push(elrun);
+				elrun.beruangtmplparent=el;
+				elrun = elrun.nextElementSibling;
+			}						
 		}		
 		let redrawClasses = [];
 		this._propClsMapCreate(el.beruangtmplchildren[0], el.beruangcls, redrawClasses, el);
