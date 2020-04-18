@@ -16,8 +16,8 @@ class MyElement extends BeruangElement {
 			},
 			grup: {
 				value: [
-				{nama:'Abdul Yadi', umur:50},
-				{nama:'Citra Larasati', umur:23}
+				{nama:'Abdul Yadi', umur:50, show:true},
+				{nama:'Citra Larasati', umur:23, show:false}
 				],
 				type:Array
 			}
@@ -47,6 +47,7 @@ class MyElement extends BeruangElement {
 <div>[[upper(g.nama)]] [[g.nama]] [[g.umur]]</div>
 <input id="inp7" class="inp" type="text" id="fname-each1" name="fname-each1" value="[[g.nama]]">
 <input id="inp8" class="inp" type="text" id="fname-each2" name="fname-each2" value="[[upper(g.nama)]]">
+<template id="tmpl2" if="[[g.show]]"><div>show [[g.nama]]</div></template>
 </template>
 
 <!--

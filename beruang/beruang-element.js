@@ -613,7 +613,12 @@ class BeruangElement extends HTMLElement {
 		properties[as] = {'type':Object};
 		let init = this._configMapInit(properties, prepare, ele, 'c'/*cls*/, as, tmplMap, tmplMap, attMap, textMap, propNames);
 		if(init.tmplmatch){//template if or each
-			//to do
+			let map = tmplMap['c']['t'];
+			ele.setAttribute(prepare.tmplType, this._solveEach(map, refunc, rplcfunc, re, rplc));
+//todo:when solve "if" replace pn and i with this: 			
+			ele.beruangeachtmplprop={};
+			ele.beruangeachtmplprop[as] = pn;
+			ele.beruangeachtmplprop[idx] = i;
 		}
 		if(init.attmatch){//attribute
 			let config = attMap['c'];
@@ -623,7 +628,7 @@ class BeruangElement extends HTMLElement {
 			};			
 		}
 		if(init.textmatch){
-			let map = textMap['c']['t'];			
+			let map = textMap['c']['t'];
 			ele.innerHTML = this._solveEach(map, refunc, rplcfunc, re, rplc);
 		}
 	////as:END
@@ -863,73 +868,6 @@ class BeruangElement extends HTMLElement {
 		}
 	}		
 /////helper:END
-
-///quarantine:begin	
-// 	_removeSquareBrackets(s, trim) {
-// 		return trim ? s.replace(/\s*\[{2}|\]{2}\s*/g, '') : s.replace(/\[{2}|\]{2}/g,'');
-// 	}
-//
-// 	_funcInit(s, params, propNames, obj) {
-// 		let f = this._removeSquareBrackets(s, true);
-// 		obj.fname = this._funcName(f);//get function name
-// 		let arr = this._funcArgs(f);//get function arguments
-// 		for(let i=0, n=arr.length; i<n; i++) {
-// 			let prop = arr[i];
-// 			if(prop.length>0){
-// 				let props = this._objPropPathSplit(prop);
-// 				let isProp = false;
-// 				if(this._prop.hasOwnProperty(props[0])) {
-// 					isProp = props.length===1 || this._prop[props[0]].type===Object/*props.length>1 must be Object*/;
-// 				}											
-// 				let o = {};
-// 				if(isProp) {
-// 					o.token = prop;
-// 					o.prop = prop;
-// 					this._objPropPathToPropNames(props, propNames);
-// 				} else {
-// 				////trim singlequote or doublequote
-// 					if(/^'|'$/g.test(prop)){
-// 						prop = prop.replace(/^'|'$/g, '');
-// 					} else if(/^"|"$/g.test(prop)) {
-// 						prop = prop.replace(/^"|"$/g, '');
-// 					}											
-// 					o.token = prop;	
-// 				}
-// 				params.push(o);
-// 			}//if(prop.length>0){
-// 		}//for(let i=0;i<arr.length;i++) {
-// 	}			
-// 	
-// 	_propOrFuncMatch(pn, s){
-// 		let re = new RegExp('\\s*[\\[]{2}' + pn + '([.]\\S+)*[\\]]{2}\\s*', 'g');//[[property]] may multiple
-// 		let propMatch = re.test(s);
-// 		let funcMatch = false;
-// 		if(!propMatch) {
-// 			re = new RegExp('^\\s*[\\[]{2}\\S+[(](.+,\\s*)*' + pn + '(\\s*,.+)*[)][\\]]{2}\\s*$');//[[function(..,property,...)]] only one
-// 			funcMatch = re.test(s);
-// 		}
-// 		re = null;
-// 		return {
-// 			'propMatch':propMatch,
-// 			'funcMatch':funcMatch
-// 		};
-// 	}	
-// 	
-// 	_propInit(s, params, propNames) {
-// 		let arr = s.match(/[\[]{2}[^\[]+[\]]{2}/g);
-// 		for(let i=0, n=arr.length; i<n; i++){
-// 			let token = arr[i];
-// 			let prop = this._removeSquareBrackets(token, false);
-// 			let props = this._objPropPathSplit(prop);
-// 			if(this._prop.hasOwnProperty(props[0])) {
-// 				if(props.length===1/*primitive type*/ || this._prop[props[0]].type===Object || this._prop[props[0]].type===Array) {
-// 					params.push({'token':token, 'prop':prop});
-// 					this._objPropPathToPropNames(props, propNames);
-// 				}
-// 			}
-// 		}	
-// 	}	
-///quarantine:end
 }
 
 export default BeruangElement;
