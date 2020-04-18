@@ -347,7 +347,7 @@ class BeruangElement extends HTMLElement {
 	
 	_termMatch(properties, text, pn, negation, propNames) { //break text into terms
 		let refunc = new RegExp('[\\[]{2}\\S+[(]\\s*(.+,\\s*)*' + pn + '([.]\\S+)*(\\s*,.+)*\\s*[)][\\]]{2}');//function terms
-		let reprop = new RegExp('[\\[]{2}' + pn + '([.]\\S+)*([:]\\S+){0,1}[\\]]{2}');//property terms		
+		let reprop = new RegExp('[\\[]{2}' + pn + '([.]\\S+)*([:]\\S+){0,1}[\\]]{2}');//property terms	
 		let mtch = refunc.test(text) || reprop.test(text);
 		if(!mtch){
 			return null;
@@ -417,13 +417,6 @@ class BeruangElement extends HTMLElement {
 					this._objPropPathToPropNames(props, propNames);//store obj.path0.path1 into propNames
 						//in order: obj=>propNames, obj.path0=>propNames, obj.path0.path1=>propNames									
 				}				
-// 				if(properties.hasOwnProperty(props[0])) {
-// 					if(props.length===1/*primitive type*/ || properties[props[0]].type===Object || properties[props[0]].type===Array) {
-// 						params.push({'prop':word});
-// 						this._objPropPathToPropNames(props, propNames);//store obj.path0.path1 into propNames
-// 							//in order: obj=>propNames, obj.path0=>propNames, obj.path0.path1=>propNames					
-// 					}
-// 				}				
 				if(params.length>0){//non function must have params
 					let term = {'fmt': fmt, 'params':params};
 					if(!!event){
@@ -484,14 +477,23 @@ class BeruangElement extends HTMLElement {
 	}
 	
 	_propClsMapInitDoText(properties, text, pn, cls, propNames, map) {
-		if(map.hasOwnProperty(cls)){
-			return false;
-		}
 		let d = this._termMatch(properties, text, pn, false, propNames);
 		if(!!!d){
 			return false;
+		}
+		let obj = map[cls];
+		if(!!!obj){
+			obj = {};
+			map[cls] = obj;
 		}		
-		map[cls] = {'t':d};
+		let attObj = obj['t'];
+		if(!!!attObj){
+			obj['t'] = d;
+		} else {
+			for(let j=0,m=d.terms.length;j<m;j++){
+				attObj.terms.push(d.terms[j]);
+			}					
+		}		
 		return true;
 	}
 /////class map config creation:BEGIN	
@@ -561,8 +563,13 @@ class BeruangElement extends HTMLElement {
 					elrun.beruangtmplparent=el;
 					tmplparent = el;
 					while(!!tmplparent){
-						if(!!el.beruangsolveeach){
-							this._solveEach(elrun, el.beruangsolveeach.as, el.beruangsolveeach.idx, el.beruangsolveeach.pn, el.beruangsolveeach.i)
+						if(!!tmplparent.beruangsolveeach){
+							this._tmplEachSolve(elrun,
+								tmplparent.beruangsolveeach.as, 
+								tmplparent.beruangsolveeach.idx, 
+								tmplparent.beruangsolveeach.pn, 
+								tmplparent.beruangsolveeach.i,
+								false);
 						}
 						tmplparent = tmplparent.beruangtmplparent;
 					}
