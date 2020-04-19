@@ -547,12 +547,21 @@ class BeruangElement extends HTMLElement {
 			this._renderClassText(cfm, el);
 		}
 	}
-	
+
+/////"if" template:BEGIN
 	_renderClassIf(ctm, el) {
 		let obj = ctm['t'];
-		let val = this._renderClassAttrValue(obj, el, null, null);
+		let val = this._renderClassAttrValue(obj, el, null, null);		
 		let show = obj.fmt.charAt(0)==='!' ? !val : val;
 		if(show){
+			this._tmplShow(el);
+		} else {
+			this._tmplHide(el);
+		};
+	}
+	
+	_tmplShow(el) {
+		if(!!!el.beruangtmplshown){
 			let tmplparenthidden=false;
 			let tmplparent;
 			let t = el;
@@ -585,7 +594,7 @@ class BeruangElement extends HTMLElement {
 								tmplparent.beruangsolveeach.i,
 								false);
 						}
-						tmplparent = tmplparent.beruangtmplparent;
+						tmplparent = tmplparent.parentNode;
 					}
 					elrun = elrun.nextElementSibling;
 				}					
@@ -595,13 +604,11 @@ class BeruangElement extends HTMLElement {
 					this._renderClass(redrawClasses[i]);
 				}
 			}		
-		} else {
-			this._tmplHide(el);
-		};
+		}
 	}
 	
 	_tmplHide(el) {
-		if(!!el.beruangtmplshown){			
+		if(!!el.beruangtmplshown){
 			for(let i=0,n=!!el.beruangtmplchildren ? el.beruangtmplchildren.length : 0; i<n; i++){
 				this._tmplHide(el.beruangtmplchildren[i]);
 			}		
@@ -619,7 +626,52 @@ class BeruangElement extends HTMLElement {
 			this._removeClassesFromMaps(clss);
 		}		
 	}
+/////"if" template:END	
 	
+/////"each" template:BEGIN
+	_renderClassEach(ctm, el) {
+		this._tmplHide(el);
+		el.beruangtmplshown=true;//each template always shown
+		let obj = ctm['t'];
+		let arr = this._renderClassAttrValue(obj, el, null, null);
+		if(arr.length===0){
+			return;
+		}
+		let pn = obj.terms[0].params[0].prop;
+		el.beruangtmplchildren = [];
+		let sibling = el.previousElementSibling;
+		for(let i=0, n=arr.length; i<n; i++){
+			let clone = document.importNode(el.content, true);			
+			el.parentNode.insertBefore(clone, el);
+			let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
+			let elrun = elstart;
+			while(!!elrun && elrun!==el) {
+				this._tmplEachSolve(elrun, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
+				let tmplparent = el.parentNode;
+				while(!!tmplparent){
+					if(!!tmplparent.beruangsolveeach){
+						this._tmplEachSolve(elrun,
+							tmplparent.beruangsolveeach.as, 
+							tmplparent.beruangsolveeach.idx, 
+							tmplparent.beruangsolveeach.pn, 
+							tmplparent.beruangsolveeach.i,
+							false);
+					}
+					tmplparent = tmplparent.parentNode;
+				}
+				el.beruangtmplchildren.push(elrun);
+				elrun.beruangtmplparent=el;
+				sibling = elrun;
+				elrun = elrun.nextElementSibling;
+			}						
+		}		
+		let redrawClasses = [];
+		this._propClsMapCreate(el.beruangtmplchildren[0], el.beruangcls, redrawClasses, el);
+		for(let i=0, n=redrawClasses.length; i<n; i++) {
+			this._renderClass(redrawClasses[i]);
+		}
+	}
+
 	_tmplEachSolve(ele, as, idx, pn, i, findSibling) {
 		while(!!ele) {
 			this._solveEach(ele, as, idx, pn, i);
@@ -712,38 +764,8 @@ class BeruangElement extends HTMLElement {
 			}
 		}
 		return fmt;		
-	}
-		
-	_renderClassEach(ctm, el) {
-		this._tmplHide(el);
-		el.beruangtmplshown=true;//each template always shown
-		let obj = ctm['t'];
-		let arr = this._renderClassAttrValue(obj, el, null, null);
-		if(arr.length===0){
-			return;
-		}
-		let pn = obj.terms[0].params[0].prop;
-		el.beruangtmplchildren = [];
-		let sibling = el.previousElementSibling;
-		for(let i=0, n=arr.length; i<n; i++){
-			let clone = document.importNode(el.content, true);			
-			el.parentNode.insertBefore(clone, el);
-			let elstart = !!sibling ? sibling.nextElementSibling : el.parentNode.firstElementChild;
-			let elrun = elstart;
-			while(!!elrun && elrun!==el) {
-				this._solveEach(elrun, el.beruangtmpleach.as, el.beruangtmpleach.idx, pn, i, false);
-				el.beruangtmplchildren.push(elrun);
-				elrun.beruangtmplparent=el;
-				sibling = elrun;
-				elrun = elrun.nextElementSibling;
-			}						
-		}		
-		let redrawClasses = [];
-		this._propClsMapCreate(el.beruangtmplchildren[0], el.beruangcls, redrawClasses, el);
-		for(let i=0, n=redrawClasses.length; i<n; i++) {
-			this._renderClass(redrawClasses[i]);
-		}
-	}
+	}		
+/////"each" template:END	
 	
 	_renderClassAttr(cam, el, cls) {
 		for(let att in cam) {
