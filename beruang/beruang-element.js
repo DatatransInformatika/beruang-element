@@ -117,7 +117,8 @@ class BeruangElement extends HTMLElement {
 			this._propClsMapCreate(this.shadowRoot.firstElementChild, cls, redrawClasses, null);			
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._renderClass(redrawClasses[i]);
-			}			
+			}
+			this.fireEvent('beruang-ready', null);
 		}
 	}
 	
@@ -148,6 +149,10 @@ class BeruangElement extends HTMLElement {
 		for(let i=0,n=!!classes ? classes.length : 0; i<n; i++) {
 			this._renderClass(classes[i]);
 		}	
+	}
+	
+	fireEvent(name, detail) {
+		this.dispatchEvent(new CustomEvent(name, {'detail': detail}));
 	}
 		
 /////initialization:BEGIN	
