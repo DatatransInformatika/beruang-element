@@ -133,10 +133,12 @@ class BeruangElement extends HTMLElement {
 	setPath(path, value) {
 		let arr = this._objPropPathSplit(path);
 		let ref = this._objPropPathRef(arr);
-		ref.obj[ref.idx] = value;
-		if(ref.obj!==this) {
-			this.renderPath(path);
-		}		
+		if(ref.val!==value){
+			ref.obj[ref.idx] = value;
+			if(ref.obj!==this) {
+				this.renderPath(path);
+			}		
+		}
 	}
 	
 	getPath(path) {
@@ -149,6 +151,25 @@ class BeruangElement extends HTMLElement {
 		for(let i=0,n=!!classes ? classes.length : 0; i<n; i++) {
 			this._renderClass(classes[i]);
 		}	
+	////notify dedicated observer for the property	
+		let p = this._prop[path];
+		if(!!p){
+			let obs = p.observer;
+			if(!!obs) {
+				this[obs].apply(null, [newValue, oldValue]);
+			}
+		}
+	////notify common observer for one or more properties
+		let observers = this._propObserversMap[path] || [];						
+		for(let i=0,n=observers.length;i<n;i++) {
+			let f = observers[i];							
+			let props = this._observerPropsMap[f];							
+			let arr=[];
+			for(let j=0,m=props.length;j<m;j++){
+				arr.push(this[props[j]]);
+			}
+			this[f].apply(null, arr);
+		}		
 	}
 	
 	fireEvent(name, detail) {
@@ -202,24 +223,7 @@ class BeruangElement extends HTMLElement {
 						this._prop[pn].value = newValue;
 					}					
 					if(changed) {
-					////update elements
-						this.renderPath(pn);
-					////dedicated observer for the property	
-						let obs = this._prop[pn].observer;
-						if(!!obs) {
-							this[obs].apply(null, [newValue, oldValue]);
-						}
-					////common observer for one or more properties
-						let observers = this._propObserversMap[pn] || [];						
-						for(let i=0,n=observers.length;i<n;i++) {
-							let f = observers[i];							
-							let props = this._observerPropsMap[f];							
-							let arr=[];
-							for(let j=0,m=props.length;j<m;j++){
-								arr.push(this[props[j]]);
-							}
-							this[f].apply(null, arr);
-						}
+						this.renderPath(pn);						
 					}
                 }
             });				
