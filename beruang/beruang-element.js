@@ -118,7 +118,7 @@ class BeruangElement extends HTMLElement {
 			for(let i=0, n=redrawClasses.length; i<n; i++) {
 				this._renderClass(redrawClasses[i]);
 			}
-			this.fireEvent('beruang-ready', null);
+			this.fireEvent('beruang-ready', true, true, null);
 		}
 	}
 	
@@ -172,8 +172,8 @@ class BeruangElement extends HTMLElement {
 		}		
 	}
 	
-	fireEvent(name, detail) {
-		this.dispatchEvent(new CustomEvent(name, {'detail': detail}));
+	fireEvent(name, bubbles, composed, detail) {
+		this.dispatchEvent(new Event(name, {'bubbles':bubbles, 'composed':composed, 'detail':detail}));
 	}
 		
 /////initialization:BEGIN	
