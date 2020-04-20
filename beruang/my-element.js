@@ -1,4 +1,5 @@
 import BeruangElement from './beruang-element.js';
+import './beruang-style.js';
 
 class MyElement extends BeruangElement {
 	static get property() {
@@ -28,7 +29,13 @@ class MyElement extends BeruangElement {
 	static get template() {
 		return `
 <style>
-:host h1 {color:red}
+:host {
+	@apply --red-color;
+}
+:host h1 {
+	color:red;
+	font-size:--font-12px
+}
 :host .inp {color:green}
 </style>
 <div>[[myLabel]]</div>
@@ -56,6 +63,11 @@ class MyElement extends BeruangElement {
 	static get observers() {
 		return ['_sapaLabelChanged(sapa, myLabel)'];
 	}
+	
+/*	connectedCallback() {
+		super.connectedCallback();
+		console.log('connectedCallback', this.shadowRoot.head);		
+	}*/
 	
 	decorate(s1, s2, s3) {
 		return s1 + ' ' + s2.toUpperCase() + ' ' + s3;

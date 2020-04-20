@@ -1,15 +1,75 @@
 <html>
+
 <head>
 <meta charset="UTF-8">
 <style>
 h1 {color:green}
 </style>
 <script type="module" src="beruang/my-element.js"></script>
+
 </head>
+
 <body>
 <h1>Test</h1>
 <div id="test">abc</div>
 <div id="test2"><span>def</span></div>
 <my-element my-label="eeooo"></my-element>
+
+
+<!--<script>
+function myFunction() {
+	let c = document.createElement('template');
+	c.setAttribute('style', 'display: none;');  
+	c.innerHTML = `<beruang-style>
+	<style>
+	html {
+		--beruang-color: {
+			color:red;
+		};	
+	}
+	</style>
+	</beruang-style>`;
+	document.head.appendChild(c.content);
+	
+	let c2 = document.createElement('template');
+	c2.setAttribute('style', 'display: none;');  
+	c2.innerHTML = `<beruang-style>
+	<style>
+	html {
+		--beruang-color2: {
+			color:blue;
+			font-size:13px;
+		};	
+	}
+	</style>
+	</beruang-style>`;
+	document.head.appendChild(c2.content);
+	
+	setTimeout(
+	function(){
+		let arr = document.getElementsByTagName('beruang-style');
+		for(let i=0,n=arr.length;i<n;i++){
+			let s = arr[i].querySelector('style');
+			s = s.textContent.trim();
+			s = s.replace(/^\s*html\s*/,'');
+			s = s.replace(/^{|}$/g,'').trim();
+			let at = s.indexOf(':');
+			let key = s.substring(0, at);
+			let value = s.substring(at + 1).trim();
+			value = value.replace(/[;]$/,'');
+			value = value.replace(/^{|}$/g,'').trim();
+			let arrval2 = [];
+			let arrval = value.split(';');
+			for(let j=0,m=arrval.length;j<m;j++){
+				if(arrval[j].length>0){
+					arrval2.push(arrval[j].trim());
+				}
+			}
+			console.log(key, arrval2);
+		}
+	},10);
+}
+</script>-->
 </body>
+
 </html>

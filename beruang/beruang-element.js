@@ -108,8 +108,12 @@ class BeruangElement extends HTMLElement {
 			let div = document.createElement('div');		
 			div.innerHTML = t.trim();			
 			let c;
-			while( !!(c = div.firstChild) ) {
-				this.shadowRoot.appendChild(c);
+			while( !!(c = div.firstChild) ) {				
+				if(c.nodeName.toLowerCase()==='style'){
+					div.removeChild(c);
+					c = this._cssPrep(c);
+				}
+				this.shadowRoot.appendChild(c);				
 			}
 			div = null;
 			let cls = this.nodeName.toLowerCase();						
@@ -175,6 +179,79 @@ class BeruangElement extends HTMLElement {
 	fireEvent(name, bubbles, composed, detail) {
 		this.dispatchEvent(new Event(name, {'bubbles':bubbles, 'composed':composed, 'detail':detail}));
 	}
+
+/////css preprocess:BEGIN	
+	_cssPrep(c)	{
+		//this._beruangStyle;	
+		let h = c.innerHTML.trim();
+		let re1 = /([^{]+)[{]([^{]+)[}]/g;
+		let re2 = /([^{]+)[{]([^{]+)[}]/;
+		let re3 = /@apply (--.+)/;
+		let re4 = /([^:]+)[:]([^:]+)/;
+		let re5 = /--.+/;
+		let s = '';
+		if(re1.test(h)){
+			let arr = h.match(re1);
+			for(let i=0,n=arr.length;i<n;i++){
+				let t = arr[i].trim();
+				let rules = t.match(re2);				
+				if(rules.length>2){
+					t = rules[1].trim() + '{';
+					let value = rules[2].trim();
+					if(!value.endsWith(';')){
+						value += ';';
+					}				
+					if(re3.test(value)) { //@apply --....
+						let ts = value.match(re3);
+						if(ts.length>0){
+							let v = ts[1];
+							//resolve v with this._beruangStyle
+							v = '(apply-var)';
+							t += v;
+						} else {
+							t += value;
+						}
+					} else {
+						let re = /([^:]+)[:]([^:]+)[;]/g;
+						if(re.test(value)){
+							let ts = value.match(re);
+							for(let j=0,m=ts.length;j<m;j++){
+								let token = ts[j].trim();
+								let arr = token.match(re4);
+								if(arr.length>2){
+									t += arr[1].trim() + ':';
+									let v = arr[2].trim().replace(/[;]$/,'');
+									if(re5.test(v)){
+										//resolve v with this._beruangStyle
+										t += '(apply-var)';
+									} else {
+										t += v;										
+									}
+									t += ';';
+								} else {
+									t += token;
+								}								
+							}
+						} else {
+							t += value;
+						}
+						re = null;
+					}
+					t += '}';
+				}//if(rules.length>2){
+				s += t + '\n';
+			}//for(let i=0,n=arr.length;i<n;i++){
+		}
+		re1 = null;
+		re2 = null;
+		re3 = null;
+		re4 = null;
+		re5 = null;
+		let style = document.createElement('style');
+		style.innerHTML = s;
+		return style;
+	}
+/////css preprocess:END
 		
 /////initialization:BEGIN	
 	_initProp() {
