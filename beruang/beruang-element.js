@@ -144,24 +144,17 @@ class BeruangElement extends HTMLElement {
 	setPath(path, value) {
 		let arr = this._objPropPathSplit(path);
 		let ref = this._objPropPathRef(arr);
-		if(ref.val!==value){
+		let oldValue = ref.val;
+		if(oldValue!==value){
 			ref.obj[ref.idx] = value;
 			if(ref.obj!==this) {
-				this.renderPath(path);
+				this.renderPath(path);				
+				this._notifyObserver(path, value, oldValue);
 			}		
 		}
 	}
 	
-	getPath(path) {
-		let arr = this._objPropPathSplit(path);
-		return this._objPropPathRef(arr).val;
-	}
-	
-	renderPath(path) {
-		let classes = this._propClsMap[path];		
-		for(let i=0,n=!!classes ? classes.length : 0; i<n; i++) {
-			this._renderClass(classes[i]);
-		}	
+	_notifyObserver(path, newValue, oldValue) {
 	////notify dedicated observer for the property	
 		let p = this._prop[path];
 		if(!!p){
@@ -180,7 +173,19 @@ class BeruangElement extends HTMLElement {
 				arr.push(this[props[j]]);
 			}
 			this[f].apply(null, arr);
-		}		
+		}	
+	}
+	
+	getPath(path) {
+		let arr = this._objPropPathSplit(path);
+		return this._objPropPathRef(arr).val;
+	}
+	
+	renderPath(path) {
+		let classes = this._propClsMap[path];		
+		for(let i=0,n=!!classes ? classes.length : 0; i<n; i++) {
+			this._renderClass(classes[i]);
+		}	
 	}
 	
 	fireEvent(name, bubbles, composed, detail) {
@@ -355,7 +360,8 @@ class BeruangElement extends HTMLElement {
 						this._prop[pn].value = newValue;
 					}					
 					if(changed) {
-						this.renderPath(pn);						
+						this.renderPath(pn);
+						this._notifyObserver(pn, newValue, oldValue);
 					}
                 }
             });				
