@@ -28,17 +28,24 @@ class MyElement extends BeruangElement {
 
 	static get template() {
 		return `
-<style>
+<style id="mystyle">
 :host {
 	@apply --red-color;
+	--custom-color:{
+		color:green;
+	};
+	--custom-font-family:lato;
 }
 :host h1 {
 	color:red;	
 }
 :host div {
-	font-size:--font-12px;
+	font-size:--font-12px;	
+	font-family:--custom-font-family;
 }
-:host .inp {color:green}
+:host .inp {
+	color:green;
+}
 </style>
 <div>[[myLabel]]</div>
 <div>[[upper(myLabel)]]</div>
