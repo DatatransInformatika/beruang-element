@@ -33,8 +33,10 @@ class MyElement extends BeruangElement {
 	@apply --red-color;
 }
 :host h1 {
-	color:red;
-	font-size:--font-12px
+	color:red;	
+}
+:host div {
+	font-size:--font-12px;
 }
 :host .inp {color:green}
 </style>

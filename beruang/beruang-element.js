@@ -204,10 +204,8 @@ class BeruangElement extends HTMLElement {
 					if(re3.test(value)) { //@apply --....
 						let ts = value.match(re3);
 						if(ts.length>0){
-							let v = ts[1];
-							//resolve v with this._beruangStyle
-							v = '(apply-var)';
-							t += v;
+							let v = ts[1].trim().replace(/[;]$/,'');		
+							t += this._solveBeruangStyle(v);
 						} else {
 							t += value;
 						}
@@ -222,8 +220,7 @@ class BeruangElement extends HTMLElement {
 									t += arr[1].trim() + ':';
 									let v = arr[2].trim().replace(/[;]$/,'');
 									if(re5.test(v)){
-										//resolve v with this._beruangStyle
-										t += '(apply-var)';
+										t += this._solveBeruangStyle(v);
 									} else {
 										t += v;										
 									}
@@ -250,6 +247,40 @@ class BeruangElement extends HTMLElement {
 		let style = document.createElement('style');
 		style.innerHTML = s;
 		return style;
+	}
+	
+	_solveBeruangStyle(s) {
+		if(!!!this._beruangStyle){
+			let bss = document.getElementsByTagName('beruang-style');
+			if(!!bss){			
+				this._beruangStyle = {};	
+				let re1 = /(--\S+)[:]([{][^{]+[}])*([^;]+)*[;]/;
+				for(let i=0,n=bss.length;i<n;i++){
+					let bs = bss[i].innerHTML.trim();
+					let re = /(--\S+)[:]([{][^{]+[}])*([^;]+)*[;]/g;
+					if(re.test(bs)){
+						let ss = bs.match(re);
+						for(let j=0,m=ss.length;j<m;j++){
+							let s = ss[j].trim();
+							if(re1.test(s)){								
+								let ts = s.match(re1);
+								if(ts.length>2 && !!ts[2]) {
+									this._beruangStyle[ts[1]]=ts[2].replace(/^[{]|[}]$/g,'');
+								} else if(ts.length>3 && !!ts[3]) {
+									this._beruangStyle[ts[1]]=ts[3];
+								}
+							}							
+						}
+					}					
+					re = null;
+				}
+				re1 = null;					
+			}
+		}
+		if(!!this._beruangStyle && this._beruangStyle.hasOwnProperty(s)){
+			s = this._beruangStyle[s];
+		}		
+		return s;
 	}
 /////css preprocess:END
 		
