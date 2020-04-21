@@ -193,6 +193,16 @@ class BeruangElement extends HTMLElement {
 	}
 
 /////css preprocess:BEGIN	
+	var(...vs) {
+		for(let i=0,n=!!vs ? vs.length:0;i<n;i++){
+			let v = vs[i];
+			if(v!==undefined && v!==null){
+				return v;
+			}
+		}
+		return '';
+	}
+
 	_beruangStyleSolve(){
 		this._beruangStyle = {};
 		let bss = document.getElementsByTagName('beruang-style');		
@@ -209,6 +219,7 @@ class BeruangElement extends HTMLElement {
 		let revar = /[-]{2}\S+/;
 		let relastsemicolon = /\s*[;]$/;
 		let reapply = /\s*@apply\s+[-]{2}\S+/;
+		let refunc = /\s*\S+\s*[(][^(]+[)]/;
 		let s = style.innerHTML;
 		let gencss = '';
 		for(let j=0,b=scopes.length;j<b;j++){
@@ -222,9 +233,9 @@ class BeruangElement extends HTMLElement {
 			let rerule = generate ? /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]|\s*@apply[^;]+[;]|\s*\S+\s*[:][^;]+[;]*/g
 				: /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]/g;			
 			if(rerule.test(scope.content)){
-				let lines = scope.content.match(rerule);
+				let lines = scope.content.match(rerule);	
 				for(let k=0,c=!!lines ? lines.length : 0;k<c;k++){					
-					let line = lines[k];
+					let line = lines[k];					
 					if(generate && reapply.test(line)){
 						let vars = line.match(revar);
 						if(vars.length>0){
@@ -233,7 +244,7 @@ class BeruangElement extends HTMLElement {
 								gencss += this._beruangStyle[v];
 							}												
 						}
-					} else {						
+					} else {											
 						let at = line.search(":");
 						if(at>-1){
 							let prop = line.substring(0, at).trim();
@@ -277,11 +288,26 @@ class BeruangElement extends HTMLElement {
 								}
 							//if(/\s*[{][^{]+[}]*/.test(val)){//object									
 							} else {//scalar
-								if(revar.test(val)){
+								if(refunc.test(val)){
+									let fn = this._funcName(val);
+									if(fn==='var'){
+										let fargs = this._funcArgs(val);
+										let arr = [];
+										for(let l=0,d=fargs.length;l<d;l++){
+											let arg = fargs[l];
+											if(revar.test(arg)){
+												arr.push(this._beruangStyle[arg]);
+											} else {
+												arr.push(arg);
+											}
+										}
+										val = this[fn].apply(null, arr);
+									}
+								} else if(revar.test(val)){
 									if(this._beruangStyle.hasOwnProperty(val)){
 										val = this._beruangStyle[val];
 									}
-								}								
+								}							
 							}
 							if(revar.test(prop)){
 								this._beruangStyle[prop] = val;									
@@ -307,6 +333,7 @@ class BeruangElement extends HTMLElement {
 		revar = null;
 		relastsemicolon = null;	
 		reapply = null;
+		refunc = null;
 		return gencss;	
 	}
 
@@ -1006,7 +1033,7 @@ class BeruangElement extends HTMLElement {
 					arr.push(param.token);
 				}
 			}
-			s = this[term.fname].apply(null, arr);		
+			s = this[term.fname].apply(null, arr);	
 		} else {//not a function
 			s = this.getPath(params[0].prop);
 		}

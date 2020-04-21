@@ -40,7 +40,7 @@ class MyElement extends BeruangElement {
 	color:red;	
 }
 :host div {
-	font-size:--font-12px;	
+	font-size:var(--my-element-font,--font-12px);	
 	font-family:--custom-font-family;
 }
 :host .inp {
