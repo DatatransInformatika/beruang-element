@@ -318,7 +318,9 @@ class BeruangElement extends HTMLElement {
 										gencss += this._beruangStyle[val];
 									}
 								} else {
-									gencss += prop + ':' + val + ';';
+									if((val || '').length>0){
+										gencss += prop + ':' + val + ';';
+									}
 								}
 							}
 						}//if(at>-1){
@@ -339,14 +341,14 @@ class BeruangElement extends HTMLElement {
 
 	_createScope(s) {
 		let scopes = [];
-		let resch = /[{}]/;
+		let re = /[{}]/;
 		let sch = s;
 		let so;
 		let stack=0;
 		let scope;
 		let idx = 0;
 		let idxstack = 0;
-		while( !!(so = resch.exec(sch)) ){
+		while( !!(so = re.exec(sch)) ){
 			if(so[0]==='{'){
 				if(++stack===1){
 					scope = s.substring(idxstack, idx + so.index).trim();	
@@ -354,14 +356,43 @@ class BeruangElement extends HTMLElement {
 				}
 			} else if(so[0]==='}') {
 				if(--stack===0){
-					scopes.push({'label':scope, 'content':s.substring(idxstack, idx + so.index)});
+					let content = this._removeComment(s.substring(idxstack, idx + so.index));
+					scopes.push({'label':scope, 'content':content});
 					idxstack = idx + so.index + 1;
 				}
 			}
 			idx += so.index + 1;
 			sch = sch.substring(so.index+1);
 		}
+		re = null;
 		return scopes;		
+	}
+	
+	_removeComment(s){
+		let re = /[/][*]|[*][/]/;
+		let stack=0;
+		let so;
+		let idx;
+		let sch = s;
+		while( !!(so = re.exec(sch)) ){
+			if(so[0]==='/*'){
+				if(++stack===1){
+					idx = so.index;
+					sch = sch.substring(idx+2);
+				} else {
+					sch = sch.substring(so.index+2);
+				}
+			} else if(so[0]==='*/') {
+				if(--stack===0){				
+					s = s.substring(0, idx) + sch.substring(so.index+2);
+					sch = s;
+				} else {
+					sch = sch.substring(so.index+2);
+				}
+			}
+		}
+		re = null;
+		return s;
 	}
 /////css preprocess:END
 		
