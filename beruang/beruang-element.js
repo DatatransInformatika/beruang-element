@@ -200,116 +200,141 @@ class BeruangElement extends HTMLElement {
 			this._beruangStyleSolveDo(bss[i], false);
 		}
 	}
-	
+		
 	_beruangStyleSolveDo(style, generate){
+		let scopes = this._createScope(style.innerHTML);
+		if(scopes.length===0){
+			return;
+		}		
 		let revar = /[-]{2}\S+/;
 		let relastsemicolon = /\s*[;]$/;
-		let recss = /[^{]+[{](\s*\S+\s*[:]*\s*\S+\s*[;]\s*)+[}]/g;
 		let reapply = /\s*@apply\s+[-]{2}\S+/;
 		let s = style.innerHTML;
 		let gencss = '';
-		if(recss.test(s)){
-			let arr = s.match(recss);
-			for(let j=0,b=!!arr ? arr.length:0;j<b;j++){
-				let scope = arr[j];
-				if(generate){					
-					let ss = scope.match(/^[^{]+/);
-					if(gencss.length>0){
-						gencss += '\n';
-					}
-					gencss += ss[0].trim() + '{';
-				}				
-				let rerule = generate ? /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]|\s*@apply[^;]+[;]|\s*\S+\s*[:][^;]+[;]*/g
-					: /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]/g;
-				if(rerule.test(scope)){
-					let lines = scope.match(rerule);
-					for(let k=0,c=!!lines ? lines.length : 0;k<c;k++){					
-						let line = lines[k];
-						if(generate && reapply.test(line)){
-							let vars = line.match(revar);
-							if(vars.length>0){
-								let v = vars[0].replace(relastsemicolon,'');
-								if(this._beruangStyle.hasOwnProperty(v)){
-									gencss += this._beruangStyle[v];
-								}												
-							}
-						} else {						
-							let at = line.search(":");
-							if(at>-1){
-								let prop = line.substring(0, at).trim();
-								let val = line.substring(at+1).replace(relastsemicolon,'').trim();
-								if(/\s*[{][^{]+[}]*/.test(val)){//object
-									val = val.replace(/^[{]|[}]$/g,'').trim();
-									if(revar.test(val)){
-										let restmt = /\s*[^:]+\s*[:]\s*[^;]+\s*[;]/g;
-										if(restmt.test(val)){
-											let t = '';
-											let stmts = val.match(restmt);
-											for(let l=0,d=!!stmts ? stmts.length : 0;l<d;l++){
-												let stmt = stmts[l];
-												if(revar.test(stmt)){
-													let words = stmt.split(':');
-													if(words.length>1){
-														t += words[0].trim() + ':';
-														let v = words[1].trim().replace(relastsemicolon,'');
-														if(this._beruangStyle.hasOwnProperty(v)){
-															v = this._beruangStyle[v];
-														}
-														t += v + ';';	
-													}												
-												} else {
-													t += stmt;
-												}
-											}
-											if(t.length>0){
-												val = t;
-											}
-										} else if(reapply.test(val)) {//@apply
-											let vars = val.match(revar);
-											if(vars.length>0){
-												let v = vars[0].replace(relastsemicolon,'');
-												if(this._beruangStyle.hasOwnProperty(v)){
-													val = this._beruangStyle[v];
+		for(let j=0,b=scopes.length;j<b;j++){
+			let scope = scopes[j];
+			if(generate){					
+				if(gencss.length>0){
+					gencss += '\n';
+				}
+				gencss += scope.label + '{';
+			}
+			let rerule = generate ? /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]|\s*@apply[^;]+[;]|\s*\S+\s*[:][^;]+[;]*/g
+				: /[-]{2}\S+\s*[:][{][^{]+[}][;]|[-]{2}\S+\s*[:][^;]+[;]/g;			
+			if(rerule.test(scope.content)){
+				let lines = scope.content.match(rerule);
+				for(let k=0,c=!!lines ? lines.length : 0;k<c;k++){					
+					let line = lines[k];
+					if(generate && reapply.test(line)){
+						let vars = line.match(revar);
+						if(vars.length>0){
+							let v = vars[0].replace(relastsemicolon,'');
+							if(this._beruangStyle.hasOwnProperty(v)){
+								gencss += this._beruangStyle[v];
+							}												
+						}
+					} else {						
+						let at = line.search(":");
+						if(at>-1){
+							let prop = line.substring(0, at).trim();
+							let val = line.substring(at+1).replace(relastsemicolon,'').trim();
+							if(/\s*[{][^{]+[}]*/.test(val)){//object
+								val = val.replace(/^[{]|[}]$/g,'').trim();
+								if(revar.test(val)){
+									let restmt = /\s*[^:]+\s*[:]\s*[^;]+\s*[;]/g;
+									if(restmt.test(val)){
+										let t = '';
+										let stmts = val.match(restmt);
+										for(let l=0,d=!!stmts ? stmts.length : 0;l<d;l++){
+											let stmt = stmts[l];
+											if(revar.test(stmt)){
+												let words = stmt.split(':');
+												if(words.length>1){
+													t += words[0].trim() + ':';
+													let v = words[1].trim().replace(relastsemicolon,'');
+													if(this._beruangStyle.hasOwnProperty(v)){
+														v = this._beruangStyle[v];
+													}
+													t += v + ';';	
 												}												
+											} else {
+												t += stmt;
 											}
 										}
-										restmt = null;		
-									}
-								//if(/\s*[{][^{]+[}]*/.test(val)){//object									
-								} else {//scalar
-									if(revar.test(val)){
-										if(this._beruangStyle.hasOwnProperty(val)){
-											val = this._beruangStyle[val];
+										if(t.length>0){
+											val = t;
 										}
-									}								
+									} else if(reapply.test(val)) {//@apply
+										let vars = val.match(revar);
+										if(vars.length>0){
+											let v = vars[0].replace(relastsemicolon,'');
+											if(this._beruangStyle.hasOwnProperty(v)){
+												val = this._beruangStyle[v];
+											}												
+										}
+									}
+									restmt = null;		
 								}
-								if(revar.test(prop)){
-									this._beruangStyle[prop] = val;									
+							//if(/\s*[{][^{]+[}]*/.test(val)){//object									
+							} else {//scalar
+								if(revar.test(val)){
+									if(this._beruangStyle.hasOwnProperty(val)){
+										val = this._beruangStyle[val];
+									}
 								}								
-								if(generate && !revar.test(prop)){
-									if(revar.test(val)){
-										if(this._beruangStyle.hasOwnProperty(val)){
-											gencss += this._beruangStyle[val];
-										}
-									} else {
-										gencss += prop + ':' + val + ';';
+							}
+							if(revar.test(prop)){
+								this._beruangStyle[prop] = val;									
+							}								
+							if(generate && !revar.test(prop)){
+								if(revar.test(val)){
+									if(this._beruangStyle.hasOwnProperty(val)){
+										gencss += this._beruangStyle[val];
 									}
+								} else {
+									gencss += prop + ':' + val + ';';
 								}
-							}//if(at>-1){
-						}//if!(generate && reapply.test(line)){
-					}						
-				}//if(rerule.test(scope)){
-				rerule=null;
-				if(generate){
-					gencss += '}';
-				}				
-			}//for(let j=0,b=!!arr ? arr.length:0;j<b;j++){			
-		}//if(recss.test(s)){
-		recss = null;	
+							}
+						}//if(at>-1){
+					}//if!(generate && reapply.test(line)){
+				}						
+			}//if(rerule.test(scope)){
+			rerule=null;
+			if(generate){
+				gencss += '}';
+			}								
+		}
 		revar = null;
 		relastsemicolon = null;	
 		reapply = null;
 		return gencss;	
+	}
+
+	_createScope(s) {
+		let scopes = [];
+		let resch = /[{}]/;
+		let sch = s;
+		let so;
+		let stack=0;
+		let scope;
+		let idx = 0;
+		let idxstack = 0;
+		while( !!(so = resch.exec(sch)) ){
+			if(so[0]==='{'){
+				if(++stack===1){
+					scope = s.substring(idxstack, idx + so.index).trim();	
+					idxstack = idx + so.index + 1;
+				}
+			} else if(so[0]==='}') {
+				if(--stack===0){
+					scopes.push({'label':scope, 'content':s.substring(idxstack, idx + so.index)});
+					idxstack = idx + so.index + 1;
+				}
+			}
+			idx += so.index + 1;
+			sch = sch.substring(so.index+1);
+		}
+		return scopes;		
 	}
 /////css preprocess:END
 		

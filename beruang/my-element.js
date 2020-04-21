@@ -44,7 +44,7 @@ class MyElement extends BeruangElement {
 	font-family:--custom-font-family;
 }
 :host .inp {
-	color:green;
+	color:green
 }
 </style>
 <div>[[myLabel]]</div>
